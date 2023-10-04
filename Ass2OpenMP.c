@@ -41,7 +41,7 @@ float ** matrix = (float**) malloc(sizeof(float*) * numberRow);
 for ( size_t ix = 0, jx = 0; ix < numberRow; ++ix, jx+=numberCol)
    matrix[ix] = matrixEntries + jx;
 
-FILE *file = fopen("test_data/cells_10.txt", "r");
+FILE *file = fopen("cells_10.txt", "r");
 
 if (file == NULL)
    {
@@ -57,7 +57,7 @@ for (int ix = 0; ix < numberRow; ix++)
 
 fclose(file);
 
-//Räkna distanserna mellan koordinaterna                                                                                                                   
+//Räkna distanserna mellan koordinaterna                                                                                                                                                 
 
 int sizeDistanceMatrix = (numberRow*(numberRow-1)/2);
 double distance, x1, x2, x3, y1, y2, y3, temp;
@@ -97,37 +97,46 @@ for( int ix = 0; ix < sizeDistanceMatrix; ++ix)
         }
     }
 
-//for (int ix = 0 ; ix < sizeDistanceMatrix; ++ix)                                                                                                         
-//    printf("%f\n",distanceMatrix[ix]);                                                                                                                   
 
-int largestElement = distanceMatrix[sizeDistanceMatrix-1];
-int sizeFrequencyMatrix = largestElement * 100; //Antag att vi har två decimaler                                                                           
+//for (int ix = 0 ; ix < sizeDistanceMatrix; ++ix)                                                                                                                                       
+//    printf("%f\n",distanceMatrix[ix]);                                                                                                                                                 
+
+float largestElement = distanceMatrix[sizeDistanceMatrix-1];
+
+//printf("%f", largestElement);                                                                                                                                                          
+
+int sizeFrequencyMatrix = largestElement * 100; //Antag att vi har två decimaler                                                                                                         
 
 float * frequencyMatrixEntries = (float*) malloc(sizeof(float) * sizeFrequencyMatrix*2);
-float ** frequencyMatrix = (float**) malloc(sizeof(float*) * sizeFrequencyMatrix);
+float ** frequencyMatrix = (float**) malloc(sizeof(float*) * 2);
 
-for ( size_t ix = 0, jx = 0; ix <= sizeFrequencyMatrix; ++ix, jx+= 2) //Vilken ordning är bäst??                                                           
+for ( size_t ix = 0, jx = 0; ix < 2; ++ix, jx+= sizeFrequencyMatrix) //Vilken ordning är bäst??                                                                                          
    frequencyMatrix[ix] = frequencyMatrixEntries + jx;
 
 
-//Initiera 0or i frequencymatrix                                                                                                                           
-for (size_t  ix = 0; ix <= sizeFrequencyMatrix; ++ix)
-    for (size_t jx = 0; jx < 2; ++jx)
-       frequencyMatrix[ix][jx] = 0;
+//Initiera 0or i frequencymatrix                                                                                                                                                         
+for (size_t  ix = 0; ix < 2; ++ix)
+    for (size_t jx = 0; jx <= sizeFrequencyMatrix; ++jx)
+       frequencyMatrix[ix][jx] = 0.;
 
 
-for (size_t ix = 0; ix < sizeDistanceMatrix; ++ix)//Vilken ordning är bäst??                                                                               
+for (size_t ix = 0; ix < sizeDistanceMatrix; ++ix)//Vilken ordning är bäst??                                                                                                             
    {
     int jx = (int)(distanceMatrix[ix]*100);
     frequencyMatrix[0][jx] = distanceMatrix[ix];
     frequencyMatrix[1][jx] =+ 1;
    }
 
-
-printf("Distance: %.2f Frequency: %.2f",frequencyMatrix[0][300],frequencyMatrix[1][300]);
-
-
 free(distanceMatrix);
+
+for (int ix = 0; ix < sizeFrequencyMatrix; ++ix)
+{
+   if (frequencyMatrix[0][ix] != 0.00)
+   {
+    printf("%.2f %.2f \n",frequencyMatrix[0][ix],frequencyMatrix[1][ix]);
+   }
+}
+
 free(frequencyMatrix);
 free(frequencyMatrixEntries);
 
