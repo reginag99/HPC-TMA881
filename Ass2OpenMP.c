@@ -41,7 +41,7 @@ float ** matrix = (float**) malloc(sizeof(float*) * numberRow);
 for ( size_t ix = 0, jx = 0; ix < numberRow; ++ix, jx+=numberCol)
    matrix[ix] = matrixEntries + jx;
 
-FILE *file = fopen("cells_10.txt", "r");
+FILE *file = fopen("test_data/cells_10.txt", "r");
 
 if (file == NULL)
    {

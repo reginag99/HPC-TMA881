@@ -8,3 +8,6 @@ Lisas : Lisas.c
 
 min : min.c
 	gcc -o $@ $< -O1 -g
+
+Ass2OpenMP : Ass2OpenMP.c
+	gcc -o $@ $< -O1 -g
