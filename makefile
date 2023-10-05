@@ -11,3 +11,6 @@ min : min.c
 
 Ass2OpenMP : Ass2OpenMP.c
 	gcc -o $@ $< -O2 -g
+
+Idas : Idas.c
+	gcc -o $@ $< -O2 -g
