@@ -19,47 +19,51 @@ int main(int argc, char *argv[]) {
     if (argv[1][0] == '-' && argv[1][1] == 't' && argLength > 2) {
         numThreads = atoi(&argv[1][2]);
     } else {
-        printf("Wrong format for argument. Use format -t[INTEGER], where [INTEGER] must be a valid whole number larger than 0.");
+        printf("wrong format for argument. use format -t[integer], where [integer] must be a valid whole number larger than 0.");
         exit(EXIT_FAILURE);
     }
 
     if (numThreads == 0) {
-        printf("INTEGER must be a valid whole number larger than 0.");
+        printf("integer must be a valid whole number larger than 0.");
         exit(EXIT_FAILURE);
     }
 
-    printf("Number of threads: %d\n", numThreads);
+    printf("number of threads: %d\n", numThreads);
 
-    // Allocate memory for Matrix 1
-    float *matrixEntries1 = (float *)malloc(sizeof(float) * box_size * numberCol);
+    // allocate memory for matrix 1
+    float *matrixentries1 = (float *)malloc(sizeof(float) * box_size * numberCol);
     float **matrix1 = (float **)malloc(sizeof(float *) * box_size);
 
     for (size_t ix = 0, jx = 0; ix < box_size; ++ix, jx += numberCol)
-        matrix1[ix] = matrixEntries1 + jx;
+        matrix1[ix] = matrixentries1 + jx;
 
-    // Allocate memory for Matrix 2
-    float *matrixEntries2 = (float *)malloc(sizeof(float) * box_size * numberCol);
+    // allocate memory for matrix 2
+    float *matrixentries2 = (float *)malloc(sizeof(float) * box_size * numberCol);
     float **matrix2 = (float **)malloc(sizeof(float *) * box_size);
 
     for (size_t ix = 0, jx = 0; ix < box_size; ++ix, jx += numberCol)
-        matrix2[ix] = matrixEntries2 + jx;
+        matrix2[ix] = matrixentries2 + jx;
 
-    FILE *file = fopen("test_data/test_data", "rb"); // Open the file in binary mode
+    FILE *file = fopen("test_data/test_data", "rb"); // open the file in binary mode
 
     if (file == NULL) {
-        printf("Error opening file.\n");
+        printf("error opening file.\n");
         return -1;
     }
 
-//int sizeDistanceMatrix = (numberRow*(numberRow-1)/2);
-//int * distanceMatrix =  (int*) malloc(sizeof(int) * sizeDistanceMatrix);
+//int sizedistancematrix = (numberrow*(numberrow-1)/2);
+//int * distancematrix =  (int*) malloc(sizeof(int) * sizedistancematrix);
 
     if (numberRow > 1000) {
         for (size_t b = 0; b < numberBoxes; ++b) {
 	for (int ix = b*1000; ix < numberRow; ix++)
      		for (int jx = 0; jx < numberCol; jx++)
     	 		{
-			fread(&matrix1,sizeof(float),box_size*numberCol,file);
+			long start1 = sizeof(float)*numberCol*(1000-1)*b;
+			fseek(file,start1,SEEK_SET);
+			for (int i = 0; i < box_size; i++){
+			//	for (int j = 0; i < numberCol; j++)
+			   		fread(matrix1[i],sizeof(float),box_size*numberCol,file);}
 			double distance, x1, x2, y1, y2, z1, z2;
 			int element = 0;
 
@@ -79,7 +83,11 @@ int main(int argc, char *argv[]) {
 			        element += 1;
 			        }
 			   }
-			fread(&matrix2,sizeof(int),box_size*numberCol,file);
+			long start2 = sizeof(float)*numberCol*(1000-1)*(b+1);
+			fseek(file,start2,SEEK_SET);
+			for (int i = 0; i < box_size; i++){
+	//			for (int j = 0; j<numberCol; j++)
+			   		fread(matrix2[i],sizeof(float),box_size*numberCol,file);}
 			for (int k = b+1; k < numberBoxes; ++k ){
 			  if(b*1000<numberRow){
 				box_size = numberRow-b*1000;}
@@ -101,21 +109,23 @@ int main(int argc, char *argv[]) {
 		     		}
 				}
 		 	  }
+
 			}
 
 	free(matrix1);
-	free(matrixEntries1);
+	free(matrixentries1);
 	free(matrix2);
-	free(matrixEntries2);
+	free(matrixentries2);
   	}
     } else {
 	
-        float * matrixEntries = (float*) malloc(sizeof(float) * box_size*numberCol);
+        float * matrixentries = (float*) malloc(sizeof(float) * box_size*numberCol);
 	float ** matrix = (float**) malloc(sizeof(float*) * box_size);
-	fread(&matrix,sizeof(float),box_size*numberCol,file);
+	for (int ix = 0; ix < numberRow; ix++)
+	   fread(matrix[ix],sizeof(float),box_size*numberCol,file);
 	
 	for ( size_t ix = 0, jx = 0; ix < box_size; ++ix, jx+=numberCol)
-   		matrix[ix] = matrixEntries + jx;
+   		matrix[ix] = matrixentries + jx;
 
 	
 	double distance, x1, x2, y1, y2, z1, z2;
@@ -137,15 +147,15 @@ int main(int argc, char *argv[]) {
         element += 1;
         	}
    	}
+for (size_t i = 0; i <box_size ; i++)
+    free(matrix[i]);
 free(matrix);
-free(matrixEntries);
-
-
+free(matrixentries);
     }
 
-    fclose(file);
+fclose(file);
 
-    float largestElement = distanceMatrix[sizeDistanceMatrix-1];
+float largestElement = distanceMatrix[sizeDistanceMatrix-1];
 
 //printf("%f", largestElement);                                                                                                                                                          
 
@@ -186,5 +196,8 @@ free(frequencyMatrix);
 free(frequencyMatrixEntries);
 
  return 0;
+
+}
+
 
 }
