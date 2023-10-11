@@ -12,6 +12,7 @@ int main(int argc, char *argv[])
   const size_t bytesPerCell = 24;
   // TODO: this will have to be much more
   const int blockSize = 1000 * 21;
+  
 
 
   int numThreads;
@@ -34,9 +35,9 @@ int main(int argc, char *argv[])
   }
 
 
-
-  unsigned long int distCount[3465];
-  for (size_t ix = 0; ix < 3465; ++ix )
+//TODO:räkna igenom så vi tillräckligt med minne
+  unsigned long int distCount[3465*numThreads];
+  for (size_t ix = 0; ix < 3465*numThreads; ++ix )
     distCount[ix] = 0;
 
   float * block0Entries =  (float*) malloc(sizeof(float) * blockSize * dim);
@@ -74,13 +75,10 @@ int main(int argc, char *argv[])
     for (size_t ix = 0; ix < ie-ib; ++ix)
     {
       fscanf(file, "%f %f %f", block0[ix], block0[ix] + 1,  block0[ix] + 2);
-    }
-    #pragma omp parallel for schedule(dynamic) shared(distCount) //each of theses loops are independent. but distCount is updatet for each interation which have to be taken into consideration. 
-//#pragma omp parallel for: Tells the compiler that the following loop should be parallelized.
-//schedule(dynamic): Helps to balance the workload among threads dynamically, useful if different iterations might take different times.
-//shared(distCount): Specifies that the distCount array is shared among all threads.
-//#pragma omp atomic update: Ensures that updates to distCount are done atomically to prevent race conditions.                                                                 
+    }  
+    #pragma omp parallel for schedule(dynamic) shared(distCount)                                                          
     for ( size_t ix = 0; ix < ie-ib; ++ix ) {
+      int threadNr = omp_get_thread_num();
       float x1 = block0[ix][0];
       float y1 = block0[ix][1];
       float z1 = block0[ix][2];
@@ -93,13 +91,12 @@ int main(int argc, char *argv[])
         float xd = x1 - x2;
         float yd = y1 - y2;
         float zd = z1 - z2;
-
+  //Warning check number of threads
         float dist = sqrtf(xd*xd + yd*yd + zd*zd);
-        #pragma omp atomic update
-        distCount[(int) (dist * 100.f)] += 1;
+        distCount[(int) (dist * 100.f)+3465*(threadNr)] += 1;
       }
     }
-    #pragma omp parallel for schedule(dynamic) shared(distCount)    
+     
     for ( size_t jb = ie; jb < nmbCells; jb += blockSize ) {
       size_t je = jb + blockSize < nmbCells ? jb + blockSize : nmbCells;
 
@@ -108,7 +105,9 @@ int main(int argc, char *argv[])
       {
         fscanf(file, "%f %f %f", block1[jx], block1[jx] + 1,  block1[jx] + 2);
       }
+      #pragma omp parallel for schedule(dynamic)  shared(distCount) 
       for ( size_t ix = 0; ix < ie-ib; ++ix ) {
+	int threadNr = omp_get_thread_num();
         float x1 = block0[ix][0];
         float y1 = block0[ix][1];
         float z1 = block0[ix][2];
@@ -122,18 +121,28 @@ int main(int argc, char *argv[])
           float zd = z1 - z2;
 
           float dist = sqrtf(xd*xd + yd*yd + zd*zd);
-          #pragma omp atomic update
-          distCount[(int) (dist * 100.f)] += 1;
-        }
+          distCount[(int) (dist * 100.f)+3465*(threadNr)] += 1;        
+	}
       }
     }
   }
-  for ( int ix = 0; ix < 3465; ++ix )
+   fclose(file);
+
+   //TODO: Summera igen för att se att det blir rätt
+
+   for (size_t ix = 0; ix < 3465; ++ix )
+	   for(size_t jx = 1; jx < numThreads ; ++jx)
+	   distCount[ix] += distCount[ix + jx*3465];
+
+   long int sum = 0;
+   for ( int ix = 0; ix < 3465; ++ix ){
     if (distCount[ix] != 0)
       printf("%.2f %d\n", ix/100.0, distCount[ix]);
+      sum += distCount[ix];
+   }
+   printf("%ld", sum);
 
-  fclose(file);
-
+ 
   free(block0Entries);
   free(block0);
   free(block1Entries);
