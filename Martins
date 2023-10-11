@@ -125,10 +125,16 @@ int main(int argc, char *argv[])
     }
   }
 
+  for ( int ix = 0; ix < 3465; ++ix )
+    if (distCount[ix] != 0)
+      printf("%.2f %d\n", ix/100.0, distCount[ix]);
 
   fclose(file);
 
-  // TODO: free me
+  free(block0Entries);
+  free(block0);
+  free(block1Entries);
+  free(block1);
 
   return 0;
 
