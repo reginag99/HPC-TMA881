@@ -1,18 +1,16 @@
 all: cell_distances
 
-
 cell_distances : cell_distances.c
-        gcc -o cell_distances cell_distances.c -O2 -g -lm -fopenmp
+	gcc -o cell_distances cell_distances.c -O2 -g -lm -fopenmp
 
 run: cell_distances
-        ./cell_distances -t1
-        ./cell_distances -t5
-        ./cell_distances -t10
-        ./cell_distances -t20
-        make clean
-
+	./cell_distances -t1
+	./cell_distances -t5
+	./cell_distances -t10
+	./cell_distances -t20
+	make clean
 
 clean:
-        rm -f cell_distances
+	rm -f cell_distances
 
 .PHONY: run clean
