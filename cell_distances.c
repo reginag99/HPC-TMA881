@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
   const int dim = 3;
   const size_t bytesPerCell = 24;
   // TODO: this will have to be much more
-  const int blockSize = 1000 * 21;
+  const int blockSize = 1000;
   
 
 
@@ -36,7 +36,15 @@ int main(int argc, char *argv[])
 
 
 //TODO:räkna igenom så vi tillräckligt med minne
-  unsigned long int distCount[3465*numThreads];
+  
+  //unsigned long int distCount[3465*numThreads];
+  
+  long int *distCount = (long int*) malloc(sizeof(long int)*3465*numThreads);
+  if (distCount == NULL) {
+    perror("Failed to allocate memory for distCount");
+    exit(EXIT_FAILURE);
+  }
+
   for (size_t ix = 0; ix < 3465*numThreads; ++ix )
     distCount[ix] = 0;
 
@@ -56,7 +64,8 @@ int main(int argc, char *argv[])
 
 
   // NOTE: change before submission
-  FILE *file = fopen("test_data/cells_1e5", "r");
+  FILE *file = fopen("cells", "r");  
+  //FILE *file = fopen("test_data/test_data","r");
   if (file == NULL)
   {
     printf("Error opening file.\n");
@@ -134,19 +143,37 @@ int main(int argc, char *argv[])
 	   for(size_t jx = 1; jx < numThreads ; ++jx)
 	   distCount[ix] += distCount[ix + jx*3465];
 
-   long int sum = 0;
    for ( int ix = 0; ix < 3465; ++ix ){
-    if (distCount[ix] != 0)
+    if (distCount[ix] != 0){
+	if (ix < 1000)
+	  printf("0%.2f %d\n", ix/100.0, distCount[ix]);
+    else
       printf("%.2f %d\n", ix/100.0, distCount[ix]);
-      sum += distCount[ix];
+    }
    }
-   printf("%ld", sum);
+/*
+   for ( int ix = 0; ix < 1000; ++ix ){
+    if (distCount[ix] != 0)
+	  printf("%04.2f %d\n", ix/100.0, distCount[ix]);}
+   for (int ix = 1000; ix < 3465; ++ix){
+    if (distCount[ix] != 0)
+      printf("%4.f %d\n", ix/100.0, distCount[ix]);
+    }
 
- 
+
+   for ( int ix = 0; ix < 3465; ++ix ){
+    if (distCount[ix] != 0){
+      printf("%04.2f %d\n", ix/100.0, distCount[ix]);
+    }
+   }
+*/
+
+  free(distCount);
   free(block0Entries);
   free(block0);
   free(block1Entries);
   free(block1);
+
 
   return 0;
 
