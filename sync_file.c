@@ -24,7 +24,7 @@ typedef struct {
 // Lämna varje pixel till reading thread
 //Definera allt vi vill skicka in i funktionen för trådarna!!
 typedef struct {
-  const float **vReal; //Double pointer "collection of lines" ska denna vara const??
+  const float **vReal; //Double pointer "collection of lines" ska denna vara const?? nej tänker jag spontant, men imaginära kan väl det?
   float **vImg; //För imaginär delen endast en float EJ array
   float **wReal; // Vill vi använda denna för att utföra operationer? 
   float **wImg; // Vill vi använda denna för att utföra operationer?
@@ -59,7 +59,7 @@ main_thrd(
 { 
   //Copying things to local variables
   const thrd_info_t *thrd_info = (thrd_info_t*) args;
-  const float **vReal = thrd_info->vReal; //Kan hårdkodas
+  const float **vReal = thrd_info->vReal; //Kan hårdkodas. VAD MENAR DU
   const float **vImg = thrd_info->vImg; //Kan hårdkodas
   float **wRel = thrd_info->wRel;
   float **wImg = thrd_info->wImg;

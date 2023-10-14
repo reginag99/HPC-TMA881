@@ -6,6 +6,8 @@
 #include <omp.h>
 #include <threads.h>
 
+
+//IDE! ANVÄNDA STATUS CHECKAR FÖR ATT VETA NÄR DET MAN ARBETAT PÅ I DEL 1 ÄR REDO ATT ANVÄNDAS I DEL 2 EFTER SYNKRONISERINGEN
 //WARN: Change before submission hur många decimaler vill vi ha?
 #define PI 3.14159265358979323846 
 
@@ -13,17 +15,19 @@
 typedef struct {
   int val;
   char pad[60]; // cacheline - sizeof(int)
-} int_padded;
+} int_padded; //VAD ÄR DETTA
 
  //WARN: Code copied from martin
 typedef struct {
   const float **v;
   float **w;
   int ib;
-  int istep;
+  int istep;//FORTSÄTTER TA STEG TILLS NÅR SZ
   int sz;
   int tx;
-  mtx_t *mtx;
+  mtx_t *mtx; //used for thread syncronisation as it do so only one thread at a time can acsess an object. 
+  //prevent data races. Använda när trådarna hämtar upp viklet punkt de är på? 
+
   cnd_t *cnd;
   int_padded *status;
 } thrd_info_t;
@@ -33,7 +37,7 @@ void GetRoots(
     int d //Rätt?
 );
 
- //WARN: Code copied from martin
+ //WARN: Code copied from martin. NÄR KOMMER DETTA ANVÄNDAS? VID INSKRIVNINGEN I FILEN/RITANDET? 
 typedef struct {
   const float **v;
   float **w;
@@ -57,7 +61,7 @@ int main(int argc, char *argv[])
     }
 
     for (int i = 1; i < 3; i++) { 
-        if (strncmp(argv[i], "-t", 2) == 0) { 
+        if (strncmp(argv[i], "-t", 2) == 0) { //strncmp checks the argument 1 to 3
             numThreads = atoi(argv[i] + 2); //add 2 to get the number after "-t"
         } else if (strncmp(argv[i], "-l", 2) == 0) {
             lines = atoi(argv[i] + 2); 
@@ -84,7 +88,7 @@ int main(int argc, char *argv[])
     //const float **v = thrd_info->v;
     //float **w = thrd_info->w;
     //const int ib = thrd_info->ib;
-    const int istep = thrd_info->istep;
+    const int istep = thrd_info->istep; // VAD HÄNDER OM JAG LÅTER TVÅ OLIKA TRÅDAR GÅ IGENOM DETTA OCH EN AV DEM INTE HAR DETTA I DERAS STATUS?
     //const int sz = thrd_info->sz;
     const int lines = thrd_info->lines;
     //const int tx = thrd_info->tx;
@@ -98,7 +102,7 @@ int main(int argc, char *argv[])
     //NOTE: Vi vet redan två rötter!! 1 ev. -1 om jämnt d och complexa konjugatet 
     //Hur hittar vi de andra komplexa rötterna?
 
-    //För rötterna skapar matrs storlek = d * 2 
+    //För rötterna skapar matrs storlek = d * 2. AHA DÅ VI HAR EN KOLUMN FÖR KOMPLEXA OCH EN FÖR REELA
     float *rootsEntries = (float*) malloc(sizeof(float)* d * 2);
     float ** roots = (float**) malloc(sizeof(float)* d); //Rätt?
 
@@ -113,20 +117,22 @@ int main(int argc, char *argv[])
     //Tar ut rötterna för polynomet
     GetRoots( float ** roots, int d);
 
-    //NOTE: Vill vi dela upp bilden i delar innan? En tråd gör en viss del?
+    //NOTE: Vill vi dela upp bilden i delar innan? En tråd gör en viss del? 
+    //BRA FRÅGA MEN KÄNNS MER EFFEKTIVT ATT GÖRA DET SÅ DE INTE HOPPAR
     for( float ix = ib; ix < lines; ix += istep){
-        //TODO: Vad är v?
-        const float *vix = v[ix];
-        float *realValues = (float*) malloc(lines*sizeof(float)*1/istep);
+        //TODO: Vad är v? VÅR MATRIS MED DATAPUNKTER SOM VI GENERERAT
+        const float *vix = v[ix]; //PEKARE PÅ EN RAD I VÅR MATRIS MED DATAPUNKTER
+        float *realValues = (float*) malloc(lines*sizeof(float)*1/istep); //vARFÖR DELAT MED ISTEP? 
         //WARN: Vilken typ ska vi använda här är float för litet?
-        float imgValues = ix - lines/2;
+        float imgValues = ix - lines/2; // VI KOLLAR PER RAD OCH PÅ EN RAD ÄR DET IMAGINÄRA VÄRDET, Y AXELN, 
+        //varierar MEDANS REALDELEN inter gör det. positionerar imgValues efter origo så att vi säknar från mitten
         //TODO: Allocate every row with rows in the image så varje tråd får en rad av bilden
         // x axeln sammma real del samma, imaginär del konstant värde i raden 
         //NOTE: Bilden ska ha storleken lines, en pixel per integer vill vi ha fler?
         for ( int jx = 0; jx < lines; jx += istep )
-            realValues[jx] = ix - lines/2;
-
-        //TO DO: Plocka ut ett x-pixel värde för netwtons metod
+            realValues[jx] = ix - lines/2; //TAR FRAM ALLA REALDELAR FÖR RADEN. blir  inte detta samma värde för alla? dv konstant realvärde? 
+//borde det inte vara jx - lines/2?
+        //TO DO: Plocka ut ett x-pixel värde för netwtons metod -FÖR ATT N PIXEL HA RKONDINATEN I MITTEN??
         //Hitta vilken rot man är närmast
         //Spara antalet iterationer
         for (kx = 0; kx < lines*1/istep; kx += istep){
@@ -139,12 +145,12 @@ int main(int argc, char *argv[])
 
                     //Beräkna x^d och xd i en funktion?
                     // Vill vi använda en switch istället? som i beskrivningen av assignment 3?
-                    //Hur funkar det i trådar?
+                    //Hur funkar det i trådar? 
                     for (int i = 0; i < (d-1); i++){
                         x_re = x_re * realValues[jx] + x_im * imgValues; 
                         x_im = x_im * realValues[jx] + x_re * imgValues; 
                     }
-                    //WARN: create if-statement for case when d = 1 or 2
+                    //WARN: create if-statement for case when d = 1 or 2 då dessa behöver ej beräknas med newtons
                     //Should we use sin/cos for of imaginary numbers instead?
                     for (int i = 0; i < (d-2); i++){
                         dx_re = dx_re * realValues[jx] + dx_im * imgValues; 
@@ -156,7 +162,8 @@ int main(int argc, char *argv[])
                 // Check for division by zero!
 
                 dx_im_conjugate = -dx_im; 
-                //WARN: Double check these calculations!! and define everything somewhere else
+                //WARN: Double check these calculations!! and define everything somewhere else. 
+                //DETTA ÄR NEWTONS FÖR BERÄKNINGEN AV RÖTTER
                 dividor = dx_re * dx_re + (dx_im) * (dx_im);
                 float re_x =  ((x_re - 1)* dx_re + dx_im_conjugate * dx_im)/ dividor; // Real del divison
                 float img_x = ((x_re - 1)* dx_im_conjugate + x_im * dx_re )/ dividor; // Imaginär del division
