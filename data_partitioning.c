@@ -34,18 +34,18 @@ rand_double()
 
 
 typedef struct {
-  atomic_int *nthrds_completed;
-  atomic_char *thrds_block_even;
+  atomic_int *nthrds_completed; //atomic acces. see how many threads that have done the work
+  atomic_char *thrds_block_even; //build up memory execution arena
   atomic_char *thrds_block_odd;
-  int nthrds;
-  int niter;
+  int nthrds;//number threads
+  int niter;//number iteration
   int sz;
   const double **m;
-  double *v;
+  double *v;//input, mult med m and gives w
   double *w;
   double *norm;
   double *norms;
-  int ib;
+  int ib;//Han delar in hema matrisen i block
   int ie;
 } thrd_info_t;
 
@@ -68,18 +68,18 @@ main_thrd(
   for ( int lx = 0; lx < niter; ++lx ) {
     double norm = 0.;
     for ( int ix = ib; ix < ie; ++ix ) {
-      const double *mix = m[ix];
+      const double *mix = m[ix]; //changing variable. 
       double wix = 0.;
-      for ( int kx = 0; kx < sz; ++kx )
+      for ( int kx = 0; kx < sz; ++kx ) //horozontal data position
         wix += mix[kx] * v[kx];
       w[ix] = wix;
       norm += wix > 0 ? wix : -wix;
     }
-    *thrd_info->norm = norm;
+    *thrd_info->norm = norm; //no overlap using this (?)
 
     // Swap pointers v and w.
     { double *tmp = v;
-      v = w;
+      v = w; 
       w = tmp;
     }
 
@@ -88,8 +88,8 @@ main_thrd(
         thrd_info->nthrds_completed, 1, memory_order_relaxed);
     if ( nthrds_completed == nthrds ) {
       // Synchronize norm computation
-      double norm = thrd_info->norms[0];
-      for ( int tx = 1; tx < nthrds; ++tx )
+      double norm = thrd_info->norms[0]; // for the last thread, when the rest of th threads are in spinlocks. take norm from first element
+      for ( int tx = 1; tx < nthrds; ++tx )//iterate through rest of element
         norm += thrd_info->norms[tx];
       for ( int tx = 0; tx < nthrds; ++tx )
         thrd_info->norms[tx] = norm;
@@ -175,11 +175,11 @@ main()
     *e = rand_double();
   for ( double *e = v, *end = v + sz; e != end; ++e )
     *e = rand_double();
-
+//on the stack
   atomic_int nthrds_completed;
   atomic_char thrds_block_even;
   atomic_char thrds_block_odd;
-  atomic_init(&nthrds_completed, 0);
+  atomic_init(&nthrds_completed, 0);//writing into varibale without syncronisation
   atomic_init(&thrds_block_even, 1);
 
   double norms[nthrds];
@@ -195,11 +195,11 @@ main()
     thrds_info[tx].m = (const double**) m;
     thrds_info[tx].v = v;
     thrds_info[tx].w = w;
-    norms[tx] = 1.;
-    thrds_info[tx].norm = norms+tx;
+    norms[tx] = 1.;//can move and add for loop
+    thrds_info[tx].norm = norms+tx;//the th element in norm array
     thrds_info[tx].norms = norms;
     thrds_info[tx].ib = ib;
-    thrds_info[tx].ie = tx != nthrds - 1 ? ib + szloc : sz;
+    thrds_info[tx].ie = tx != nthrds - 1 ? ib + szloc : sz; // tha last thread might need to do a bit more (??)
 
     int r = thrd_create(thrds+tx, main_thrd, (void*) (thrds_info+tx));
     if ( r != thrd_success ) {
@@ -215,7 +215,7 @@ main()
 
 
   for ( int ix = 0; ix < 10; ++ix )
-    printf("%f ", v[ix] / w[ix]);
+    printf("%f ", v[ix] / w[ix]); 
   printf("\n");
 
   free(m);
