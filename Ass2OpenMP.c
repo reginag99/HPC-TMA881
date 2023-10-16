@@ -41,7 +41,7 @@ float ** matrix = (float**) malloc(sizeof(float*) * numberRow);
 for ( size_t ix = 0, jx = 0; ix < numberRow; ++ix, jx+=numberCol)
    matrix[ix] = matrixEntries + jx;
 
-FILE *file = fopen("cells_10.txt", "r");
+FILE *file = fopen("test_data/test_data", "r");
 
 if (file == NULL)
    {
@@ -60,7 +60,7 @@ fclose(file);
 //Räkna distanserna mellan koordinaterna                                                                                                                                                 
 
 int sizeDistanceMatrix = (numberRow*(numberRow-1)/2);
-double distance, x1, x2, x3, y1, y2, y3, temp;
+double distance, x1, x2, y1, y2, z1, z2, temp;
 int element = 0;
 
 double * distanceMatrix =  (double*) malloc(sizeof(double) * sizeDistanceMatrix);
@@ -68,15 +68,15 @@ double * distanceMatrix =  (double*) malloc(sizeof(double) * sizeDistanceMatrix)
 for (int ix = 0 ; ix < (numberRow - 1) ; ++ix)
    {
         x1 = matrix[ix][0];
-        x2 = matrix[ix][1];
-        x3 = matrix[ix][2];
+        y1 = matrix[ix][1];
+        z1 = matrix[ix][2];
     for (int jx = ix + 1; jx < numberRow; ++jx )
         {
-        y1 = matrix[jx][0];
+        x2 = matrix[jx][0];
         y2 = matrix[jx][1];
-        y3 = matrix[jx][2];
+        z2 = matrix[jx][2];
 
-        distance = sqrt((x1-y1)*(x1-y1)+(x2-y2)*(x2-y2)+(x3-y3)*(x3-y3));
+        distance = sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2)+(z1-z2)*(z1-z2));
         distanceMatrix[element] = round(distance*100)/100;
         element += 1;
         }
