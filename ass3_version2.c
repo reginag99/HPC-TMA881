@@ -16,7 +16,7 @@ TYPE_CONV ** convergences;
 TYPE_ATTR * attractor;
 TYPE_CONV * convergence;
 
-double complex StepLength(z, int d);
+double complex StepLength(double complex z, int d);
 void GetRoots( float ** roots,  int d);
 
 typedef struct {
@@ -78,6 +78,11 @@ int main_thrd(void *args)
   for (i = tx, ix = ib; i < lines, ix >= ie; i += numThreads, ix -= (stepSize*numThreads)) { //Skickar in vart vi börjar i ib!                                                            
     *attractor = (TYPE_ATTR *) malloc(lines*sizeof(TYPE_ATTR)); //Vill vi initiera till -1
     *convergence = (TYPE_CONV *) malloc(lines*sizeof(TYPE_CONV));
+
+    for ( size_t cx = 0; cx < lines; ++cx ) {
+        attractor[cx] = 0;
+        convergence[cx] = 0;
+        }
                                                                                                                     
     for ( j = 0, jx = -2.; j < lines, jx <= 2.; ++j , jx += (stepSize*numThreads)){
        z = ix + jx * I;
@@ -115,14 +120,13 @@ int main_thrd(void *args)
             }
             z = z - result.nom/result.denom;
        }
+       attractor[j] = k;
       }
-        
-    attractor[j] = k;
 
     mtx_lock(mtx); //Vi vet ej ordningen på trådar     
 
-    attractors[i] = attractor;
-    convergences[i] = convergence;
+    attractors[i] = attractor; //Detta är data transfer? Hur garanterar vi att den skriver på rätt rad?
+    convergences[i] = convergence; //Detta är data transfer? Hur garanterar vi att den skriver på rätt rad?
 
     status[tx].val = i + tx;
     //Matris med antalet trådar rader varje tråd lägger sin rad i sin kolumn?                                                                                                             
@@ -142,13 +146,51 @@ main_thrd_check(
     )
 {
   const thrd_info_check_t *thrd_info = (thrd_info_check_t*) args;
-  int **attractors = thrd_info->attractors; //Ska bytas till färg eller antal iterationer                                                                                                        
-  int **convergences = thrd_info->convergences; //Ska bytas till färg eller antal iterationer!!                                                                                                        
+  int **attractors = thrd_info->attractors;                                                                                                     
+  int **convergences = thrd_info->convergences;                                                                                                      
   const int lines = thrd_info->lines;
   const int numThreads = thrd_info->numThreads;
   mtx_t *mtx = thrd_info->mtx;
   cnd_t *cnd = thrd_info->cnd;
   int_padded *status = thrd_info->status;
+
+  //Vart vill vi öppna filen?
+  FILE *file = fopen("output.ppm", "w");
+    if (file == NULL) {
+    perror("Error opening the file");
+    exit(EXIT_FAILURE);
+    }
+
+//Flytta till funktion??
+    // create colour matrix
+    int colour_index = 11;
+    int colour_coordinates = 3;
+    int colour_array[colour_index][colour_coordinates] = {
+        {255, 0, 0}
+        {0, 255, 0}
+        {0, 0, 255}
+        {255, 255, 0}
+        {0, 255, 255}
+        {255, 0, 255}
+        {255, 255, 255}
+        {0, 0, 0}
+        {100, 0, 100}
+        {100, 100, 0}
+        {0, 100, 100}
+    };
+
+//create gray matrix
+    int gray_index = 128;
+    int gray_coordinates = 3;  
+    int gray_array[gray_index][gray_coordinates];
+
+    for (int i = 0; i < gray_index; i++) {
+        int intensity = i * 2; 
+        gray_array[i][0] = intensity;  
+        gray_array[i][1] = intensity;  
+        gray_array[i][2] = intensity; }
+
+  int grayIndex, colorIndex;
 
   for ( int ix = 0, ibnd; ix < lines; ) {
     for ( mtx_lock(mtx); ; ) {
@@ -165,15 +207,42 @@ main_thrd_check(
          }
       }
 
-    fprintf(stderr, "checking until %i\n", ibnd);
+    //fprintf(stderr, "checking until %i\n", ibnd);
 
     for ( ; ix < ibnd; ++ix ) {
+        for(jx = 0; jx < lines; ++jx){
+            grayIndex = attractors[ix][jx];
+            colorIndex = attractors[ix][jx];
+
+            R = colour_array[colorIndex][0];
+            G = colour_array[colorIndex][1];
+            B = colour_array[colorIndex][2];
+            
+            Rg = colour_array[grayIndex][0];
+            Gg = colour_array[grayIndex][1];
+            Bg = colour_array[grayIndex][2];
+
+            //WARN: Allocate memory for these
+            pixelBufferGray[jx] = [Rg,Gg,Bg];
+            //pixelBuffer[jx] = [R,G,B];
+
+            //Hämta ut de 3 värdena på färgerna
+            //Skriv till en buffer
+        }
+    //Här skriver vi hela buffer till filen!!
+    //Pixel buffer har samma storlek som lines!
+    fwrite(pixelBufferGray, sizeof(char), strlen(pixelBufferGray), file);
+    //fwrite(pixelBuffer, sizeof(char), strlen(pixelBuffer), file);
+    //Måste vi tömma pixelbuffer efter varje iteration?
+
     free(attractors[ix]);
     free(convergences[ix]);
   }
  }
 
-  return 0;
+ //Vill vi stänga filen här?
+ fclose(file);
+ return 0;
 }
 
 int
@@ -201,7 +270,6 @@ main(int argc, char *argv[])
         }   
     }
 
-//För rötterna skapar matrs storlek = d * 2. AHA DÅ VI HAR EN KOLUMN FÖR KOMPLEXA OCH EN FÖR REELA
 float *rootsEntries = (float*) malloc(sizeof(float)* d * 2);
 float ** roots = (float**) malloc(sizeof(float)* d); //Rätt?
 
@@ -212,7 +280,7 @@ for ( size_t ix = 0; ix < d; ++ix )
     for ( size_t jx = 0; jx < 2; ++jx )
         roots[ix][jx] = 0;
   
-    //Tar ut rötterna för polynomet
+//Tar ut rötterna för polynomet
 GetRoots( float ** roots, int d);
 
 const float lines = 100.;
@@ -295,32 +363,39 @@ return 0;
 }
 
 //WARN: Är detta rätt? Vill man inlina funktionen?
-void GetRoots( float ** roots, int d) {
-     // Hårdkoda de riktiga rötterna alltså 1 och -1? 
-     // Beror på om d är jämnt eller ej
+void GetRoots(ComplexNumber *roots, int d) {
+    // The 'roots' array will store the complex roots
+    // The 'colours' array will store the colors associated with each root
+
     if (d % 2 == 0) {
-        roots[0][0] = 1.;
-        roots[0][1] = 0.;
-        roots[1][0] = -1.;
-        roots[1][1] = 0.;
+        roots[0].real = 1.0;
+        roots[0].imaginary = 0.0;
+        roots[1].real = -1.0;
+        roots[1].imaginary = 0.0;
 
+        if (d > 2) {
+            for (size_t ix = 2; ix < d; ix++) {
+                float theta = (ix * 2 * PI) / d;
+                roots[ix].real = cos(theta);
+                roots[ix].imaginary = sin(theta);
+            }
+        }
     } else {
-        roots[0][0] = 1.; 
-        roots[0][1] = 0.;
-    }
+        roots[0].real = 1.0;
+        roots[0].imaginary = 0.0;
 
-    //TODO: Hitta de andra rötterna! De Moivre's Theorem?
-    if (d > 2){
-        for( size_t ix = 2; ix < d; ix++) {
-            float theta = (ix*2* PI) / d ;        
-            roots[ix][0] = cos(theta);
-            roots[ix][1] = sin(theta);
+        if (d > 1) {
+            for (size_t ix = 1; ix < d; ix++) {
+                float theta = (ix * 2 * PI) / d;
+                roots[ix].real = cos(theta);
+                roots[ix].imaginary = sin(theta);                
+            
+            }
         }
     }
 }
 
-double complex StepLength(double ix, double jx, int d) {
-
+double complex StepLength(double complex z, int d) {
     struct TwoValues result;
 
     result.value1 = 42;
