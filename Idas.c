@@ -98,32 +98,45 @@ float calculate_new_x(float x, int d) {
 
 
 
-// //WARN: Är detta rätt? Vill man inlina funktionen?
-void GetRoots( float ** roots, int d) {
+typedef struct {
+    float real;
+    float imaginary;
+} ComplexNumber;
 
-     // Hårdkoda de riktiga rötterna alltså 1 och -1? 
-     // Beror på om d är jämnt eller ej
-    if (d % 2 == 0) { //if d is even
-        roots[0][0] = 1.; //re
-        roots[0][1] = 0.; //im
-        roots[1][0] = -1.; //re
-        roots[1][1] = 0.; //im
 
-    } else {
-        roots[0][0] = 1.; //re
-        roots[0][1] = 0.; //im
-    }
 
-    //TODO: Hitta de andra rötterna! De Moivre's Theorem?
-    if (d > 2){
-        for( size_t ix = 2; ix < d; ix++) {
-            float theta = (ix*2* PI) / d ;        
-            roots[ix][0] = cos(theta);
-            roots[ix][1] = sin(theta);
+void GetRoots(ComplexNumber *roots, int d) {
+    // The 'roots' array will store the complex roots
+    // The 'colours' array will store the colors associated with each root
+
+    if (d % 2 == 0) {
+        roots[0].real = 1.0;
+        roots[0].imaginary = 0.0;
+        roots[1].real = -1.0;
+        roots[1].imaginary = 0.0;
+
+        if (d > 2) {
+            for (size_t ix = 2; ix < d; ix++) {
+                float theta = (ix * 2 * PI) / d;
+                roots[ix].real = cos(theta);
+                roots[ix].imaginary = sin(theta);
+            }
         }
+    } else {
+        roots[0].real = 1.0;
+        roots[0].imaginary = 0.0;
 
+        if (d > 1) {
+            for (size_t ix = 1; ix < d; ix++) {
+                float theta = (ix * 2 * PI) / d;
+                roots[ix].real = cos(theta);
+                roots[ix].imaginary = sin(theta);                
+            
+            }
+        }
     }
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -159,18 +172,18 @@ int main(int argc, char *argv[])
     //Note: Defines the "size" of the pixels
     // istep = 0.1;
 
-    //WARN: Code copied from martin
-    //const thrd_info_t *thrd_info = (thrd_info_t*) args;
-    //const float **v = thrd_info->v;
-    //float **w = thrd_info->w;
-    //const int ib = thrd_info->ib;
-    const int istep = thrd_info->istep;
-    //const int sz = thrd_info->sz;
-    const int lines = thrd_info->lines;
-    //const int tx = thrd_info->tx;
-    mtx_t *mtx = thrd_info->mtx;
-    cnd_t *cnd = thrd_info->cnd;
-    int_padded *status = thrd_info->status;
+    // //WARN: Code copied from martin
+    // //const thrd_info_t *thrd_info = (thrd_info_t*) args;
+    // //const float **v = thrd_info->v;
+    // //float **w = thrd_info->w;
+    // //const int ib = thrd_info->ib;
+    // const int istep = thrd_info->istep;
+    // //const int sz = thrd_info->sz;
+    // const int lines = thrd_info->lines;
+    // //const int tx = thrd_info->tx;
+    // mtx_t *mtx = thrd_info->mtx;
+    // cnd_t *cnd = thrd_info->cnd;
+    // int_padded *status = thrd_info->status;
 
     // TO DO: Vi behöver hitta de riktiga rötterna för att ta reda på vilken de konvergerar
     // till för bilden med färg! Till svartvit bild måste vi spara antalet iterationer
@@ -182,12 +195,12 @@ int main(int argc, char *argv[])
     float *rootsEntries = (float*) malloc(sizeof(float) * d * 2);
     float **roots = (float**) malloc(sizeof(float) * d); //Rätt?
 
-    // for ( size_t ix = 0, jx = 0; ix < d; ++ix, jx+=2)
-    //     roots[ix] = rootsEntries + jx;
+    for ( size_t ix = 0, jx = 0; ix < d; ++ix, jx+=2)
+        roots[ix] = rootsEntries + jx;
 
-    // for ( size_t ix = 0; ix < d; ++ix )
-    //     for ( size_t jx = 0; jx < 2; ++jx )
-    //         roots[ix][jx] = 0;
+    for ( size_t ix = 0; ix < d; ++ix )
+        for ( size_t jx = 0; jx < 2; ++jx )
+            roots[ix][jx] = 0;
 
 for (size_t ix = 0; ix < d; ++ix) {
     // For each 'ix', make 'roots[ix]' point to the corresponding elements in 'rootsEntries'.
@@ -201,7 +214,7 @@ for (size_t ix = 0; ix < d; ++ix) {
 }
     
     //Tar ut rötterna för polynomet
-    // GetRoots( float **roots, int d);
+    GetRoots(roots, d, colours);
     float ib;
     float istep = 0.01;
     //NOTE: Vill vi dela upp bilden i delar innan? En tråd gör en viss del?
@@ -254,28 +267,57 @@ for (size_t ix = 0; ix < d; ++ix) {
 
 
 
+// create colour matrix
+    int colour_index = 11;
+    int colour_coordinates = 3;
+    int colour_array[colour_index][colour_coordinates] = {
+        {255, 0, 0}
+        {0, 255, 0}
+        {0, 0, 255}
+        {255, 255, 0}
+        {0, 255, 255}
+        {255, 0, 255}
+        {255, 255, 255}
+        {0, 0, 0}
+        {100, 0, 100}
+        {100, 100, 0}
+        {0, 100, 100}
+    };
 
-    FILE *colour = fopen("colour_map", "w");
+//create gray matrix
+    int gray_index = 128;
+    int gray_coordinates = 3;  
+    int gray_array[gray_index][gray_coordinates];
+
+    for (int i = 0; i < gray_index; i++) {
+        int intensity = i * 2; 
+        gray_array[i][0] = intensity;  
+        gray_array[i][1] = intensity;  
+        gray_array[i][2] = intensity; 
+
+    FILE *colour = fopen("newton_attractors_xd.ppm", "w");
         if (colour == NULL){
             printf("Error opening file.\n");
             return -1;
         }
 
     for(int ix = 0; ix < lines; ix++){ // loopar över rader
-        for(int jx = 0; jx < length; jx++) // hur många pixlar i taget?
+        for ( size_t cx = 0; cx < lines; ++cx ) {
+            int gray_index_number = attractor[cx]; //gråskala
+            int colour_index_number = convergence[cx]; //färgbild
 
+
+        
+//talet i attractor = rad i gray_array
 
             //fwrite(input data, size in bytes, number of elements, file)
-            fwrite(input, lines*lines*sizeof(int), length, colour)
-        
+            fwrite(input_colours, lines*lines*sizeof(int), 1, colour);
+
+        }
     }
 
 
     fclose(colour);
-
-
-
-
 
 
 
