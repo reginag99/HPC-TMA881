@@ -7,6 +7,14 @@
 #include <complex.h>
 
 #define PI 3.14159265358979323846 
+typedef uint8_t TYPE_ATTR;  
+typedef uint8_t TYPE_CONV; 
+
+TYPE_ATTR ** attractors;
+TYPE_CONV ** convergences;
+
+TYPE_ATTR * attractor;
+TYPE_CONV * convergence;
 
 double complex StepLength(z, int d);
 void GetRoots( float ** roots,  int d);
@@ -17,8 +25,8 @@ typedef struct {
 } int_padded;
 
 typedef struct {
-  int **wIndex;
-  int **wIteration;
+  int **attractors;
+  int **convergences;
   int numThreads;
   double ib;//Ska denna vara const?                                                                                                                                                       
   double ie;
@@ -31,8 +39,8 @@ typedef struct {
 } thrd_info_t;
 
 typedef struct {
-  int **wIndex;
-  int **wIteration;
+  int **attractors;
+  int **convergences;
   int lines;
   int numThreads;
   mtx_t *mtx;
@@ -43,10 +51,10 @@ typedef struct {
 int main_thrd(void *args)
 {
   const thrd_info_t *thrd_info = (thrd_info_t*) args;
-  int **wIndex = thrd_info->wIndex; //Bytt typ till int, Ska bytas till färg, koordingater för testning, ska bli globala                                                                 
-  int **wIteration = thrd_info->wIteration; //Bytt typ till int, Ska bytas till antalet, koordinater för testning, ska bli globala                                                                 
-  //double *dReal = thrd_info->wIndex; //Bytt typ till int, Data transfer matris ska bytas till färg eller antal iterationer                                                               
-  //double *dImg = thrd_info->wIteration; //Bytt typ till int, Data transfer matris ska bytas till färg eller antal iterationer!!                                                               
+  int **attractors = thrd_info->attractors; //Bytt typ till int, Ska bytas till färg, koordingater för testning, ska bli globala                                                                 
+  int **convergences = thrd_info->convergences; //Bytt typ till int, Ska bytas till antalet, koordinater för testning, ska bli globala                                                                 
+  //double *dReal = thrd_info->attractors; //Bytt typ till int, Data transfer matris ska bytas till färg eller antal iterationer                                                               
+  //double *dImg = thrd_info->convergences; //Bytt typ till int, Data transfer matris ska bytas till färg eller antal iterationer!!                                                               
   int numThreads = thrd_info->numThreads;
   double ib = thrd_info->ib;
   double ie = thrd_info->ie;
@@ -68,8 +76,8 @@ int main_thrd(void *args)
   //inget större än en character                                                                                                                                                        
                                                                                                                                                    
   for (i = tx, ix = ib; i < lines, ix >= ie; i += numThreads, ix -= (stepSize*numThreads)) { //Skickar in vart vi börjar i ib!                                                            
-    int *wix_iteration = (int*) malloc(lines*sizeof(int)); //Vill vi initiera till -1
-    int *wix_index = (int*) malloc(lines*sizeof(int));
+    *attractor = (TYPE_ATTR *) malloc(lines*sizeof(TYPE_ATTR)); //Vill vi initiera till -1
+    *convergence = (TYPE_CONV *) malloc(lines*sizeof(TYPE_CONV));
                                                                                                                     
     for ( j = 0, jx = -2.; j < lines, jx <= 2.; ++j , jx += (stepSize*numThreads)){
        z = ix + jx * I;
@@ -77,13 +85,13 @@ int main_thrd(void *args)
             
             //Ifsats kolla om x är nära origin
             if (0.001 < creal(z)  && creal(z) > 0.001 || 0.001 < cimag(z)  && cimag(z) > 0.001 ){
-                wix_index [j] = d + 1;
+                convergence [j] = d + 1;
                 break;
             }
 
             //Kolla om real or img part is bigger than 10^10
             if (1000000000 > creal(z)  && creal(z) < -1000000000  || 1000000000 > cimag(z)  && cimag(z) < -1000000000  ){
-                wix_index [j] = d + 1;
+                convergence [j] = d + 1;
                 break;
             }
 
@@ -95,7 +103,7 @@ int main_thrd(void *args)
                 for(int ixd = 0; ixd < d; ixd++){
                     if((ix <=  (roots[0][ixd] + 0.001) || ix >=  (roots[0][ixd] - 0.001)) &&
                      (jx <=  (roots[1][ixd] + 0.001) || jx >=  (roots[1][ixd] - 0.001))){
-                           wix_index [j] = ixd;
+                           convergence [j] = ixd;
                            break;
                         }
                 }
@@ -103,23 +111,23 @@ int main_thrd(void *args)
             }
 
             if (k == 128){
-                 wix_index [j] = d + 1;
+                 convergence [j] = d + 1;
             }
             z = z - result.nom/result.denom;
        }
       }
         
-    wix_iteration[j] = k;
+    attractor[j] = k;
 
     mtx_lock(mtx); //Vi vet ej ordningen på trådar     
 
-    wIndex[i] = wix_iteration;
-    wIteration[i] = wix_index;
+    attractors[i] = attractor;
+    convergences[i] = convergence;
 
     status[tx].val = i + tx;
     //Matris med antalet trådar rader varje tråd lägger sin rad i sin kolumn?                                                                                                             
     //Varje tråd lägger sin pixel i sin column.                                                                                                                                           
-    // Vill vi göra data transfer här??                                                                                                                                                   
+    // Vill vi göra data transfer här??                                                                                                                                                 
     // Vi kan skicka iväg tråden :)                                                                                                                                                       
     mtx_unlock(mtx);
     cnd_signal(cnd);
@@ -134,8 +142,8 @@ main_thrd_check(
     )
 {
   const thrd_info_check_t *thrd_info = (thrd_info_check_t*) args;
-  int **wIndex = thrd_info->wIndex; //Ska bytas till färg eller antal iterationer                                                                                                        
-  int **wIteration = thrd_info->wIteration; //Ska bytas till färg eller antal iterationer!!                                                                                                        
+  int **attractors = thrd_info->attractors; //Ska bytas till färg eller antal iterationer                                                                                                        
+  int **convergences = thrd_info->convergences; //Ska bytas till färg eller antal iterationer!!                                                                                                        
   const int lines = thrd_info->lines;
   const int numThreads = thrd_info->numThreads;
   mtx_t *mtx = thrd_info->mtx;
@@ -160,8 +168,8 @@ main_thrd_check(
     fprintf(stderr, "checking until %i\n", ibnd);
 
     for ( ; ix < ibnd; ++ix ) {
-    free(wIndex[ix]);
-    free(wIteration[ix]);
+    free(attractors[ix]);
+    free(convergences[ix]);
   }
  }
 
@@ -211,8 +219,8 @@ const float lines = 100.;
 double stepSize = 1/lines;
 int numThreads = 10;
 const double sz = lines/numThreads; //Används ej!                                                                                                                                       
-int **wIndex = (int**) malloc(lines*sizeof(int*));
-int **wIteration = (int**) malloc(lines*sizeof(int*));
+**attractors = (TYPE_ATTR **) malloc(lines*sizeof(TYPE_ATTR *));
+**convergences = (TYPE_CONV **) malloc(lines*sizeof(TYPE_CONV *));
 thrd_t thrds[numThreads];
 thrd_info_t thrds_info[numThreads];
 
@@ -236,8 +244,8 @@ int_padded status[numThreads];
 for ( int tx = 0; tx < numThreads; ++tx ) {
     double ib = 2.0 - (tx * stepSize);
     double ie = -2.0 + (numThreads-tx)*stepSize;
-    thrds_info[tx].wIndex = wIndex;
-    thrds_info[tx].wIteration = wIteration;
+    thrds_info[tx].attractors = attractors;
+    thrds_info[tx].convergences = convergences;
     thrds_info[tx].numThreads = numThreads; //Casta till const?                                                                                                                           
     thrds_info[tx].ib = ib; //Ska vi casta till const?                                                                                                                                    
     thrds_info[tx].ie = ie; //Ska vi casta till const?                                                                                                                                    
@@ -259,8 +267,8 @@ for ( int tx = 0; tx < numThreads; ++tx ) {
    }
 
 {
- thrd_info_check.wIndex = wIndex;
- thrd_info_check.wIteration = wIteration;
+ thrd_info_check.attractors = attractors;
+ thrd_info_check.convergences = convergences;
  thrd_info_check.lines = lines;
  thrd_info_check.numThreads = numThreads;
  thrd_info_check.mtx = &mtx;
@@ -366,3 +374,34 @@ double complex StepLength(double ix, double jx, int d) {
         exit(1);
     }
 }
+
+
+/*
+    switch (d) {
+    case 1:
+        return 1.0;
+    case 2:
+        return 0.5*x + 1/(2*x);
+    case 3:
+        return 2*x/3 + 1/(3*x*x);
+    case 4:
+        return 3*x/4 + 1/(4*x*x*x);
+    case 5:
+        return 4*x/5 + 1/(5*x*x*x*x);
+    case 6:
+        return 5*x/6 + 1/(6*x*x*x*x*x);
+    case 7:
+        return 6*x/7 + 1/(7*x*x*x*x*x*x); 
+    case 8:
+        return 7*x/8 + 1/(8*x*x*x*x*x*x*x);
+    case 9:
+        return 8*x/9 + 1/(9*x*x*x*x*x*x*x*x);  
+    case 10:
+        return 9*x/10 + 1/(10*x*x*x*x*x*x*x*x*x);
+    
+    default:
+        fprintf(stderr, "unexpected degree\n");
+        exit(1);
+    }
+
+*/
