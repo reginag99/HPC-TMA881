@@ -363,36 +363,36 @@ return 0;
 }
 
 //WARN: Är detta rätt? Vill man inlina funktionen?
-void GetRoots(ComplexNumber *roots, int d) {
-    // The 'roots' array will store the complex roots
-    // The 'colours' array will store the colors associated with each root
-
+void GetRoots( float ** roots, int d) {
+     // Hårdkoda de riktiga rötterna alltså 1 och -1? 
+     // Beror på om d är jämnt eller ej
     if (d % 2 == 0) {
-        roots[0].real = 1.0;
-        roots[0].imaginary = 0.0;
-        roots[1].real = -1.0;
-        roots[1].imaginary = 0.0;
+        roots[0][0] = 1.;
+        roots[0][1] = 0.;
+        roots[1][0] = -1.;
+        roots[1][1] = 0.;
 
-        if (d > 2) {
-            for (size_t ix = 2; ix < d; ix++) {
-                float theta = (ix * 2 * PI) / d;
-                roots[ix].real = cos(theta);
-                roots[ix].imaginary = sin(theta);
-            }
-        }
-    } else {
-        roots[0].real = 1.0;
-        roots[0].imaginary = 0.0;
-
-        if (d > 1) {
-            for (size_t ix = 1; ix < d; ix++) {
-                float theta = (ix * 2 * PI) / d;
-                roots[ix].real = cos(theta);
-                roots[ix].imaginary = sin(theta);                
-            
-            }
+     if (d > 2){
+        for( size_t ix = 2; ix < d; ix++) {
+            float theta = (ix*2* PI) / d ;        
+            roots[ix][0] = cos(theta);
+            roots[ix][1] = sin(theta);
         }
     }
+
+    } else {
+        roots[0][0] = 1.; 
+        roots[0][1] = 0.;
+
+        if (d > 1){
+        for( size_t ix = 2; ix < d; ix++) {
+            float theta = (ix*2* PI) / d ;        
+            roots[ix][0] = cos(theta);
+            roots[ix][1] = sin(theta);
+            }
+        } 
+    }
+
 }
 
 double complex StepLength(double complex z, int d) {
