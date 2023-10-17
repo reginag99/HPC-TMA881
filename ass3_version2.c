@@ -41,6 +41,8 @@ typedef struct {
 typedef struct {
   int **attractors;
   int **convergences;
+  uint8_t * pixelBuffer;
+  uint8_t * pixelBufferGray;
   int lines;
   int numThreads;
   mtx_t *mtx;
@@ -106,9 +108,8 @@ int main_thrd(void *args)
             //Breakas det correct och vill vi ha warning om det inte funkar?
             if (result.nom < 0.001*d && result.nom > -0.001*d){
                 for(int ixd = 0; ixd < d; ixd++){
-                    //Blir det typfel här? Måste vi använda complext tal?? 
-                    if((creal(z) <=  (roots[0][ixd] + 0.001) || creal(z) >=  (roots[0][ixd] - 0.001)) &&
-                     (cimag(z) <=  (roots[1][ixd] + 0.001) || cimag(z) >=  (roots[1][ixd] - 0.001))){
+                    if((ix <=  (roots[0][ixd] + 0.001) || ix >=  (roots[0][ixd] - 0.001)) &&
+                     (jx <=  (roots[1][ixd] + 0.001) || jx >=  (roots[1][ixd] - 0.001))){
                            convergence [j] = ixd;
                            break;
                         }
@@ -148,7 +149,9 @@ main_thrd_check(
 {
   const thrd_info_check_t *thrd_info = (thrd_info_check_t*) args;
   int **attractors = thrd_info->attractors;                                                                                                     
-  int **convergences = thrd_info->convergences;                                                                                                      
+  int **convergences = thrd_info->convergences;  
+  uint8_t * pixelBufferGray = thrd_info->pixelBufferGray;
+  uint8_t * pixelBuffer = thrd_info->pixelBuffer;                                                                                                
   const int lines = thrd_info->lines;
   const int numThreads = thrd_info->numThreads;
   mtx_t *mtx = thrd_info->mtx;
@@ -232,8 +235,8 @@ main_thrd_check(
         }
     //Här skriver vi hela buffer till filen!!
     //Pixel buffer har samma storlek som lines!
-    fwrite(pixelBufferGray, sizeof(char), strlen(pixelBufferGray), file);
-    //fwrite(pixelBuffer, sizeof(char), strlen(pixelBuffer), file);
+    fwrite(pixelBufferGray, sizeof(pixel), strlen(pixelBufferGray), file);
+    //fwrite(pixelBuffer, sizeof(pixel), strlen(pixelBuffer), file);
     //Måste vi tömma pixelbuffer efter varje iteration?
 
     free(attractors[ix]);
@@ -338,11 +341,14 @@ for ( int tx = 0; tx < numThreads; ++tx ) {
 {
  thrd_info_check.attractors = attractors;
  thrd_info_check.convergences = convergences;
+ thrd_info_check.pixelBufferGray = pixelBufferGray;
+ thrd_info_check.pixelBuffer = pixelBuffer;
  thrd_info_check.lines = lines;
  thrd_info_check.numThreads = numThreads;
  thrd_info_check.mtx = &mtx;
  thrd_info_check.cnd = &cnd;
  thrd_info_check.status = status;
+
 
  int r = thrd_create(&thrd_check, main_thrd_check, (void*) (&thrd_info_check));
     if ( r != thrd_success ) {
@@ -481,4 +487,3 @@ double complex StepLength(double complex z, int d) {
     }
 
 */
-
