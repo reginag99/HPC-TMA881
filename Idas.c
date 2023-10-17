@@ -1,248 +1,286 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <omp.h>
-#include <ctype.h>
-#include <math.h>   
+#include <math.h>
+#include <time.h>
+#include <threads.h>
+
+//WARN: Change before submission hur många decimaler vill vi ha?
+#define PI 3.14159265358979323846 
+
+ //WARN: Code copied from martin
+typedef struct {
+  int val;
+  char pad[60]; // cacheline - sizeof(int)
+} int_padded;
+
+ //WARN: Code copied from martin
+typedef struct {
+  const float **v;
+  float **w;
+  int ib;
+  int istep;
+  int sz;
+  int tx;
+  mtx_t *mtx;
+  cnd_t *cnd;
+  int_padded *status;
+} thrd_info_t;
+
+void GetRoots(
+    float ** roots,
+    int d //Rätt?
+);
+
+ //WARN: Code copied from martin
+typedef struct {
+  const float **v;
+  float **w;
+  int sz;
+  int nthrds;
+  mtx_t *mtx;
+  cnd_t *cnd;
+  int_padded *status;
+} thrd_info_check_t;
+
+float calculate_new_x(float x, int d) {
+    float new_x;
+
+    switch (d) {
+    case 1:
+        new_x = 1.0;
+
+        break;
+
+    case 2:
+        new_x = 0.5*x + 1/(2*x);
+        break;
+
+    case 3:
+        new_x = 2*x/3 + 1/(3*x*x);
+        break;
+
+    case 4:
+        new_x = 3*x/4 + 1/(4*x*x*x);
+        break;
+
+    case 5:
+        new_x = 4*x/5 + 1/(5*x*x*x*x);
+        break;
+
+    case 6:
+        new_x = 5*x/6 + 1/(6*x*x*x*x*x);
+        break;
+
+    case 7:
+        new_x = 6*x/7 + 1/(7*x*x*x*x*x*x);
+
+        break;
+    
+    case 8:
+        new_x = 7*x/8 + 1/(8*x*x*x*x*x*x*x);
+        break;
+
+    case 9:
+        new_x = 8*x/9 + 1/(9*x*x*x*x*x*x*x*x);
+        break;
+    
+    case 10:
+        new_x = 9*x/10 + 1/(10*x*x*x*x*x*x*x*x*x);
+        break;
+    
+    default:
+        fprintf(stderr, "unexpected degree\n");
+        exit(1);
+    }
+    return new_x;
+}
 
 
-/*
 
+// //WARN: Är detta rätt? Vill man inlina funktionen?
+void GetRoots( float ** roots, int d) {
 
-Har lagt in ett förslag på hur man kanske kan beräkna distanserna
-Får dock segfault så kan inte kolla om den funkar...
+     // Hårdkoda de riktiga rötterna alltså 1 och -1? 
+     // Beror på om d är jämnt eller ej
+    if (d % 2 == 0) { //if d is even
+        roots[0][0] = 1.; //re
+        roots[0][1] = 0.; //im
+        roots[1][0] = -1.; //re
+        roots[1][1] = 0.; //im
 
-*/
+    } else {
+        roots[0][0] = 1.; //re
+        roots[0][1] = 0.; //im
+    }
 
+    //TODO: Hitta de andra rötterna! De Moivre's Theorem?
+    if (d > 2){
+        for( size_t ix = 2; ix < d; ix++) {
+            float theta = (ix*2* PI) / d ;        
+            roots[ix][0] = cos(theta);
+            roots[ix][1] = sin(theta);
+        }
 
-
-//int compare (const void * a, const void * b);
+    }
+}
 
 int main(int argc, char *argv[])
 {
+    // ./newton -t5 -l1000 7
+    // ./newton -l1000 -t5 7
+    int lines, numThreads, d;
 
-int numberRow = 10;
-int numberCol = 3; 
-//int numThreads;
-//int argLenght = strlen(argv[1]);
-
-double distance;
-int block_row = 5;
-int block_characters = 24;
-int block_size = block_row * numberCol;
-int number_blocks = numberRow/block_row;
-
-
-int size_distances_in_block = block_row*(block_row-1)/2;
-int sizeDistanceMatrix = numberRow*(numberRow-1)/2;
-int size_distances_between_blocks = sizeDistanceMatrix - size_distances_in_block*number_blocks;
-
-printf("size_distance_in_block %d\n", size_distances_in_block);
-printf("number of blocks %d \n", number_blocks);
-printf("size_distance_between_blocks %d\n", size_distances_between_blocks);
-printf("sizeDistanceMatrix %d\n", sizeDistanceMatrix);
-
-
-// if (argv[1][0] == '-' && argv[1][1] == 't' && argLenght > 2) {
-//     numThreads = atoi(&argv[1][2]);
-//    } else  {
-//     printf("Wrong format for argument use format -t[INTEGER], where [INTEGER] must be valid whole number larger than 0.");
-//     exit(EXIT_FAILURE);
-//    }
-
-// if (numThreads == 0){
-//     printf("INTEGER must be valid whole number larger than 0.");
-//     exit(EXIT_FAILURE);
-//    }
-
-// printf("Number of threads %d\n", numThreads);
-
-
-
-float * in_blockEntries = (float*) malloc(sizeof(float) * block_size);
-float **in_block = (float**) malloc(sizeof(float*) * block_row);
-float * between_blockEntries = (float*) malloc(sizeof(float) * block_size);
-float **between_block = (float**) malloc(sizeof(float*) * block_row);
-
-double * distances_in_block =  (double*) malloc(sizeof(double) * size_distances_in_block);
-double * distances_between_blocks = (double*)malloc(sizeof(double) * size_distances_between_blocks);
-for ( size_t ix = 0, jx = 0; ix < block_row; ++ix, jx+=block_characters)
-   in_block[ix] = in_blockEntries + jx;
-for ( size_t ix = 0, jx = 0; ix < block_row; ++ix, jx+=block_characters)
-   between_block[ix] = between_blockEntries + jx;
-
-
-
-FILE *file = fopen("cells_10", "rb");
-if (file == NULL){
-    printf("Error opening file.\n");
-    return -1;
-   }
-
-
-size_t block_bytes = block_size * sizeof(float);
-
-
-// Calculate distances within each block
-for (int i = 0; i < numberRow; i += block_row) {
-
-        for (int ix = 0; ix < block_row; ix++) {
-            fread(in_block[ix], sizeof(float), block_bytes, file);
-            int element = 0;
-
-            for (int j = 0; j < (block_row - 1); j++) {
-               float x1 = in_block[j][0];
-               float x2 = in_block[j][1];
-               float x3 = in_block[j][2];
-
-            for (int k = j + 1; k < block_row; k++){
-               float y1 = in_block[k][0];
-               float y2 = in_block[k][1];
-               float y3 = in_block[k][2];
-
-               distance = sqrt((x1-y1)*(x1-y1)+(x2-y2)*(x2-y2)+(x3-y3)*(x3-y3));
-               distances_in_block[element] = (int)(distance * 100 + 0.5) / 100.0;
-               element += 1;
-                printf("distances_in_block[%d] = %.2f\n", element - 1, distances_in_block[element - 1]);
-               
-            
-            }
-         }
+    if (argc != 3 && argc != 4) {
+        printf("Two or three arguments expected");
+        exit(EXIT_FAILURE);
     }
+
+    for (int i = 1; i < 4; i++) { 
+        if (strncmp(argv[i], "-t", 2) == 0) { 
+            numThreads = atoi(argv[i] + 2); 
+        } else if (strncmp(argv[i], "-l", 2) == 0) {
+            lines = atoi(argv[i] + 2); 
+        } else if (strncmp(argv[i], "", 0) == 0) {
+            d = atoi(argv[i] + 0);
+          
+        } else {
+            printf("Wrong format\n");
+            return 1;
+        }   
+    }
+
+    omp_set_num_threads(numThreads);
+
+    printf("numThreads = %d \n", numThreads);
+    printf("lines = %d \n", lines);
+    printf("d = %d \n", d);
+
+    //Note: Defines the "size" of the pixels
+    // istep = 0.1;
+
+    //WARN: Code copied from martin
+    //const thrd_info_t *thrd_info = (thrd_info_t*) args;
+    //const float **v = thrd_info->v;
+    //float **w = thrd_info->w;
+    //const int ib = thrd_info->ib;
+    const int istep = thrd_info->istep;
+    //const int sz = thrd_info->sz;
+    const int lines = thrd_info->lines;
+    //const int tx = thrd_info->tx;
+    mtx_t *mtx = thrd_info->mtx;
+    cnd_t *cnd = thrd_info->cnd;
+    int_padded *status = thrd_info->status;
+
+    // TO DO: Vi behöver hitta de riktiga rötterna för att ta reda på vilken de konvergerar
+    // till för bilden med färg! Till svartvit bild måste vi spara antalet iterationer
+
+    //NOTE: Vi vet redan två rötter!! 1 ev. -1 om jämnt d och complexa konjugatet 
+    //Hur hittar vi de andra komplexa rötterna?
+
+    //För rötterna skapar matris storlek = d * 2 
+    float *rootsEntries = (float*) malloc(sizeof(float) * d * 2);
+    float **roots = (float**) malloc(sizeof(float) * d); //Rätt?
+
+    // for ( size_t ix = 0, jx = 0; ix < d; ++ix, jx+=2)
+    //     roots[ix] = rootsEntries + jx;
+
+    // for ( size_t ix = 0; ix < d; ++ix )
+    //     for ( size_t jx = 0; jx < 2; ++jx )
+    //         roots[ix][jx] = 0;
+
+for (size_t ix = 0; ix < d; ++ix) {
+    // For each 'ix', make 'roots[ix]' point to the corresponding elements in 'rootsEntries'.
+    roots[ix] = rootsEntries + ix * 2;
 }
 
+// Initialize the values for each element in 'roots'.
+for (size_t ix = 0; ix < d; ++ix) {
+    roots[ix][0] = 0.0; // Real part
+    roots[ix][1] = 0.0; // Imaginary part
+}
+    
+    //Tar ut rötterna för polynomet
+    // GetRoots( float **roots, int d);
+    float ib;
+    float istep = 0.01;
+    //NOTE: Vill vi dela upp bilden i delar innan? En tråd gör en viss del?
+    for( float ix = ib; ix < lines; ix += istep){
+        //TODO: Vad är v?
+        // const float *vix = v[ix];
 
+        double *realValues = (double*) malloc(sizeof(double)*lines*1/istep*128);
+        //WARN: Vilken typ ska vi använda här är float för litet?
+        float imgValues = ix - lines/2;
+        //TODO: Allocate every row with rows in the image så varje tråd får en rad av bilden
+        // x axeln sammma real del samma, imaginär del konstant värde i raden 
+        //NOTE: Bilden ska ha storleken lines, en pixel per integer vill vi ha fler?
+        for ( int jx = 0; jx < lines; jx += istep )
+            realValues[jx] = ix - lines/2;
 
-// Calculate distances between blocks
-for (int i = 0; i < numberRow; i += block_row) {
+        //TO DO: Plocka ut ett x-pixel värde för netwtons metod
+        //Hitta vilken rot man är närmast
+        //Spara antalet iterationer
+        for (int kx = 0; kx < lines*1/istep; kx += istep){
+                float x_re = realValues[kx];
+                float x_im = imgValues;
+                //for loop 128 steps if solution not found what do we do with pixel?
+                for (int jx = 0; jx < 128; ix++){
 
-    for (int ix = 0; ix < block_row; ix++)
-        fread(between_block[ix], sizeof(float), block_bytes, file);
-
-        for (int ix1 = i; ix1 < i + block_row; ix1++) 
-        {   
-            fread(between_block[ix1], sizeof(float), block_bytes, file);
-            int element_between = 0;
-            float x1 = between_block[ix1][0];
-            float x2 = between_block[ix1][1];
-            float x3 = between_block[ix1][2];
-
-            for (int ix2 = i+1; ix2 < i + block_row; ix2++) {
-
-                fread(between_block[ix2 + block_row], sizeof(float), block_bytes, file);
-                float y1 = between_block[ix2 + block_row][0];
-                float y2 = between_block[ix2 + block_row][1];
-                float y3 = between_block[ix2 + block_row][2];
-
-                distance = sqrt((x1 - y1) * (x1 - y1) + (x2 - y2) * (x2 - y2) + (x3 - y3) * (x3 - y3));
-                distances_between_blocks[element_between] = (int)(distance * 100 + 0.5) / 100.0;
-                element_between += 1;
+                    float new_x_re = calculate_new_x(x_re, d);
+                    float new_x_im = calculate_new_x(x_im, d);
+    
+                    new_x_re = new_x_re - x_re;
+                    new_x_im = new_x_im - x_im;
+                    printf("new_x_re %f \n", new_x_re);
+                    float new_x = new_x_re + new_x_im;
                 
-                printf("distances_between_blocks[%d] = %.2f\n", element_between - 1, distances_between_blocks[element_between - 1]);
-                
+                    //WARN: Detta gäller ej för komplext tal!!
+                    // Double check termination critera
+                    //Vill vi använda komplexa tal på polär form?
+                    if(new_x < 0.001 && new_x > -0.001){
+                        break;
+                    }
+                }
             }
+            free(realValues);
         }
+    free(roots);
+    free(rootsEntries);
+
+    
+
+
+
+
+
+
+    FILE *colour = fopen("colour_map", "w");
+        if (colour == NULL){
+            printf("Error opening file.\n");
+            return -1;
+        }
+
+    for(int ix = 0; ix < lines; ix++){ // loopar över rader
+        for(int jx = 0; jx < length; jx++) // hur många pixlar i taget?
+
+
+            //fwrite(input data, size in bytes, number of elements, file)
+            fwrite(input, lines*lines*sizeof(int), length, colour)
+        
     }
 
 
-
-
-double *distanceMatrix = (double*) malloc(sizeof(double) * sizeDistanceMatrix);
-
-// Copy elements from distances_in_block to distanceMatrix
-for (int i = 0; i < size_distances_in_block; i++) {
-    distanceMatrix[i] = distances_in_block[i];
-}
-
-// Copy elements from distances_between_blocks to distanceMatrix
-for (int i = 0; i < size_distances_between_blocks; i++) {
-    distanceMatrix[size_distances_in_block + i] = distances_between_blocks[i];
-}
-
-
-
-// for (int ix = 0 ; ix < sizeDistanceMatrix; ++ix)                                                                                                                                       
-//     printf("%f\n",distanceMatrix[ix]);     
-
-fclose(file);
-
-for (int i = 0; i < block_row; i++) {
-    free(in_block[i]);
-    free(between_block[i]);
-}
-free(in_block);
-free(between_block);
-
-
-free(in_blockEntries);
-free(between_blockEntries);
-free(distances_in_block);
-free(distances_between_blocks);
+    fclose(colour);
 
 
 
 
 
 
-for( int ix = 0; ix < sizeDistanceMatrix; ++ix)
-    {
-        for(int jx = ix + 1; jx < sizeDistanceMatrix; jx++)
-        { if(distanceMatrix[ix]> distanceMatrix[jx])
-            {
-                double temp = distanceMatrix[ix];
-                distanceMatrix[ix] = distanceMatrix[jx];
-                distanceMatrix[jx] = temp;
-            }
-        }
-    }
-
-// for (int ix = 0 ; ix < sizeDistanceMatrix; ++ix)                                                                                                                                       
-//     printf("%f\n",distanceMatrix[ix]);                                                                                                                                                 
-
-float largestElement = distanceMatrix[sizeDistanceMatrix-1];
-
-//printf("%f", largestElement);                                                                                                                                                          
-
-int sizeFrequencyMatrix = largestElement * 100; //Antag att vi har två decimaler                                                                                                         
-
-float *frequencyMatrixEntries = (float*) malloc(sizeof(float) * sizeFrequencyMatrix*2);
-float **frequencyMatrix = (float**) malloc(sizeof(float*) * 2);
-
-for ( size_t ix = 0, jx = 0; ix < 2; ++ix, jx+= sizeFrequencyMatrix) //Vilken ordning är bäst??                                                                                          
-   frequencyMatrix[ix] = frequencyMatrixEntries + jx;
 
 
-//Initiera 0or i frequencymatrix                                                                                                                                                         
-for (size_t  ix = 0; ix < 2; ++ix)
-    for (size_t jx = 0; jx <= sizeFrequencyMatrix; ++jx)
-       frequencyMatrix[ix][jx] = 0.;
-
-
-for (size_t ix = 0; ix < sizeDistanceMatrix; ++ix)//Vilken ordning är bäst??                                                                                                             
-   {
-    int jx = (int)(distanceMatrix[ix]*100);
-    frequencyMatrix[0][jx] = distanceMatrix[ix];
-    frequencyMatrix[1][jx] += 1;
-   }
-
-
-
-free(distanceMatrix);
-
-printf("Before printing distanceMatrix\n");
-for (int ix = 0; ix < sizeFrequencyMatrix; ++ix)
-{
-   if (frequencyMatrix[0][ix] != 0.00)
-   {
-    printf("%.2f %.2f \n",frequencyMatrix[0][ix],frequencyMatrix[1][ix]);
-   }
-}
-printf("After printing distanceMatrix\n");
-
-free(frequencyMatrix);
-free(frequencyMatrixEntries);
-
- return 0;
+  return 0;
 
 }
+
