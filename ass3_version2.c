@@ -106,8 +106,9 @@ int main_thrd(void *args)
             //Breakas det correct och vill vi ha warning om det inte funkar?
             if (result.nom < 0.001*d && result.nom > -0.001*d){
                 for(int ixd = 0; ixd < d; ixd++){
-                    if((ix <=  (roots[0][ixd] + 0.001) || ix >=  (roots[0][ixd] - 0.001)) &&
-                     (jx <=  (roots[1][ixd] + 0.001) || jx >=  (roots[1][ixd] - 0.001))){
+                    //Blir det typfel här? Måste vi använda complext tal?? 
+                    if((creal(z) <=  (roots[0][ixd] + 0.001) || creal(z) >=  (roots[0][ixd] - 0.001)) &&
+                     (cimag(z) <=  (roots[1][ixd] + 0.001) || cimag(z) >=  (roots[1][ixd] - 0.001))){
                            convergence [j] = ixd;
                            break;
                         }
@@ -480,3 +481,4 @@ double complex StepLength(double complex z, int d) {
     }
 
 */
+
