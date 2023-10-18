@@ -18,6 +18,6 @@ Idas : Idas.c
 Assignment3 : Assignment3.c
 	gcc -o $@ $< -O2 -g
 
-ass3_minne : Ass3_minne.c
+ass3_minne : ass3_minne.c
 	gcc -o $@ $< -O2 -g
 
