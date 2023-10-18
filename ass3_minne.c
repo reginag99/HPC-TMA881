@@ -11,16 +11,12 @@
 typedef unsigned char TYPE_ATTR;
 typedef unsigned char TYPE_CONV;
 
-struct result{
-    double complex nom;
-    double complex denom;
-    };
+
 
 TYPE_ATTR ** attractors;
 TYPE_CONV ** convergences;
 
-TYPE_ATTR * attractor;
-TYPE_CONV * convergence;
+
 
 void StepLength(double complex z,double complex nom,double complex denom, int d);
 void GetRoots( float ** roots,  int d);
@@ -37,10 +33,7 @@ typedef struct {
   TYPE_CONV **convergences;
   float**roots;
   int numThreads;
-  double ib;//Ska denna vara const?                                                                                                                                                     
-  double ie;
-  int d;
-  float stepSize;
+  int d; 
   int lines;
   int tx;
   mtx_t *mtx;
@@ -62,22 +55,16 @@ typedef struct {
 int main_thrd(void *args)
 {
   const thrd_info_t *thrd_info = (thrd_info_t*) args;
-  TYPE_ATTR **attractors = thrd_info->attractors; //Bytt typ till int, Ska bytas till färg, koordingater för testning, ska bli globala                                                 \
-                                                                                                                                                                                        
-  TYPE_CONV **convergences = thrd_info->convergences; //Bytt typ till int, Ska bytas till antalet, koordinater för testning, ska bli globala                                           \
-                                                                                                                                                                                        
+  TYPE_ATTR **attractors = thrd_info->attractors;                                                                                                                                                        
+  TYPE_CONV **convergences = thrd_info->convergences;                                                                                                                                                                                 
   float**roots = thrd_info->roots;
   int numThreads = thrd_info->numThreads;
-  double ib = thrd_info->ib;
-  double ie = thrd_info->ie;
   int d = thrd_info->d;
-  const double stepSize = thrd_info->stepSize;
   const int lines = thrd_info->lines;
   const int tx = thrd_info->tx;
   mtx_t *mtx = thrd_info->mtx;
   cnd_t *cnd = thrd_info->cnd;
   int_padded *status = thrd_info->status;
-
   int i, j, k;
   double ix, jx;
   double complex z,nom,denom;
@@ -88,36 +75,37 @@ int main_thrd(void *args)
                                                                                                                                                                                         
   //inget större än en character  
   
-  for (i = tx, ix = ib; i < lines, ix >= ie; i += numThreads, ix -= (stepSize*numThreads)) { //Skickar in vart vi börjar i ib!                                                         \
+  for (i = tx; i < lines;i += numThreads) {
+	ix = 2.0 -(4.0*i)/(lines-1);                                                
                                                                                                                                                                                         
-    TYPE_ATTR*attractor = (TYPE_ATTR *) malloc(lines*sizeof(TYPE_ATTR)); //Vill vi initiera till -1                                                                                     
+    TYPE_ATTR*attractor = (TYPE_ATTR *) malloc(lines*sizeof(TYPE_ATTR));                                                               
     TYPE_CONV*convergence = (TYPE_CONV *) malloc(lines*sizeof(TYPE_CONV));
 
     for ( size_t cx = 0; cx < lines; ++cx ) {
-        attractor[cx] = 0;
-        convergence[cx] = 0;
+        attractor[cx] = d;
+        convergence[cx] = d;
         }
 
-    for ( j = 0, jx = -2.; j < lines, jx <= 2.; ++j , jx += (stepSize*numThreads)){
-       z = ix + jx * I;
+    for ( j = 0; j < lines; ++j){
+	jx = -2.0 +(4.0*j)/(lines-1);   
+        z = ix + jx * I;
        //Print worked here!!                                                                                                                                                            
        for (k = 0; k < 128; k++){
             //Ifsats kolla om x är nära origin                                                                                                                                          
-            if (0.001 < creal(z)  && creal(z) > 0.001 || 0.001 < cimag(z)  && cimag(z) > 0.001 ){
-                convergence[j] = d + 1;
+            if (creal(z) > -0.001  && creal(z) < 0.001 || cimag(z) > -0.001  && cimag(z) <  -0.001 ){
                 break;
             }
             //Kolla om real or img part is bigger than 10^10                                                                                                                            
-            if (1000000000 > creal(z)  && creal(z) < -1000000000  || 1000000000 > cimag(z)  && cimag(z) < -1000000000  ){
-                convergence[j] = d + 1;
+            if (creal(z) > 1000000000  && creal(z) < -1000000000  || cimag(z) > 1000000000  && cimag(z) < -1000000000  ){
                 break;
             }
-            StepLength(z,nom,denom, d);
+            FunctionDerivate(z, d);
             //WARN: Blir det fler eller färre värdesiffror när vi kollar på funk värdet?                                                                                                
             //Vill vi verkligen kolla på funktionsvärdet                                                                                                                                
             //Breakas det correct och vill vi ha warning om det inte funkar?                                                                                                            
             //För dyrt med absolutbelopp?
             if (cabs(nom) < 0.001*d && cabs(nom) > -0.001*d){
+		convergence[j] = k;
                 for(int ixd = 0; ixd < d; ixd++){
                     //Blir det typfel här? Måste vi använda complext tal??                                                                                                              
                     if((creal(z) <=  (roots[ixd][0] + 0.001) || creal(z) >=  (roots[ixd][0] - 0.001)) &&
@@ -129,9 +117,6 @@ int main_thrd(void *args)
                 break;
             }
 
-            if (k == 128){
-                 convergence [j] = d + 1;
-            }
             z = z - nom/denom;
             //Print does not work here!!                                                                                                                                                
             printf("Real: %f\n", creal(z));     // Print the real part                                                                                                                  
@@ -156,7 +141,7 @@ int main_thrd(void *args)
                                                                                                                                                                                         
     mtx_unlock(mtx);
     cnd_signal(cnd);
-    thrd_sleep(&(struct timespec){.tv_sec=0, .tv_nsec=10}, NULL);
+    //thrd_sleep(&(struct timespec){.tv_sec=0, .tv_nsec=10}, NULL);
    }
   return 0;
 }
@@ -177,22 +162,28 @@ main_thrd_check(
   int_padded *status = thrd_info->status;
 
   //Vart vill vi öppna filen?                                                                                                                                                           
-  FILE *file = fopen("output.ppm", "w");
-    if (file == NULL) {
-    perror("Error opening the file");
+  FILE *file_gray = fopen("output_gray.ppm", "w");
+    if (file_gray == NULL) {
+    perror("Error opening the file gray");
     exit(EXIT_FAILURE);
     }
 
-  TYPE_ATTR *colorEntries = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* (d + 1)* 3);
-  TYPE_ATTR** color = (TYPE_ATTR**) malloc(sizeof(TYPE_ATTR*) * 3);
+    FILE *file_color = fopen("output_color.ppm", "w");
+    if (file_color == NULL) {
+    perror("Error opening the file color");
+    exit(EXIT_FAILURE);
+    }
 
-  for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
+  char *colorEntries = (char*) malloc(sizeof(char)* (d+1)* 3);
+  char** color = (char**) malloc(sizeof(char*) * 3);
+
+  for ( size_t ix = 0, jx = 0; ix <= d; ++ix, jx+=3)
         color[ix] = colorEntries + jx;
 
   GetColors(color, d);
 
-  TYPE_CONV *grayscaleEntries = (TYPE_CONV*) malloc(sizeof(TYPE_CONV)* (d + 1)* 3);
-  TYPE_CONV** grayscale = (TYPE_CONV**) malloc(sizeof(TYPE_CONV*) * 3);
+  char *grayscaleEntries = (char*) malloc(sizeof(char)* (d + 1)* 3);
+  char** grayscale = (char**) malloc(sizeof(char*) * 3);
 
   for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
         grayscale[ix] = grayscaleEntries + jx;
@@ -207,7 +198,12 @@ main_thrd_check(
     pixelBufferGray[ix] = pixelBufferGrayEntries + jx;
 
 
-  TYPE_ATTR*pixelBufferColor = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* lines);
+ // TYPE_ATTR* pixelBufferColor = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* lines*3);
+ // TYPE_ATTR** pixelBufferColor= (TYPE_ATTR**) malloc(sizeof(TYPE_ATTR*) * lines);
+
+  //for ( size_t ix = 0, jx = 0; ix < lines; ++ix, jx+= 3)
+   // pixelBufferColor[ix] = pixelBufferColorEntries + jx;
+
 
   int grayIndex, colorIndex;
   TYPE_CONV Rg,Gg,Bg;
@@ -242,17 +238,41 @@ main_thrd_check(
             Rg = grayscale[grayIndex][0];
             Gg = grayscale[grayIndex][1];
             Bg = grayscale[grayIndex][2];
-            //Skriv till en buffer                                                                                                                                                      
+            //Skriv till en buffer   
+	   //// printf("Färg: %c",Rg );
 
             pixelBufferGray[jx][0] = Rg;
             pixelBufferGray[jx][1] = Gg;
             pixelBufferGray[jx][2] = Bg;
+
+            pixelBufferColor[jx][0] = Rc;
+            pixelBufferColor[jx][1] = Gc;
+            pixelBufferColor[jx][2] = Bc;
+
+   	    unsigned char string_gray[12*lines*sizeof()];            
+	    memcpy(string_gray, pixelBufferGray[ix], sizeof(TYPE_CONV)*12);
+					     //
+  	    unsigned char string_color[12*lines*sizeof(TYPE_ATTR)];
+	    memcpy(string_color, pixelBufferColor[ix], sizeof(TYPE_ATTR)*12);
+
+
         }
-    //Här skriver vi hela buffer till filen!!                                                                                                                                           
-    //Pixel buffer har samma storlek som lines!                                                                                                                                         
-    //fwrite(pixelBufferGray, sizeof(TYPE_CONV), lines, file);                                                                                                                          
-    //fwrite(pixelBuffer, sizeof(char), strlen(pixelBuffer), file);                                                                                                                     
-    //Måste vi tömma pixelbuffer efter varje iteration?                                                                                                                                 
+
+    //Här skriver vi hela buffer till filen!!     
+    
+              
+    fprintf(file_gray, "P3\n");
+    fprintf(file_gray, "%d %d \n", lines, lines);
+    fprintf(file_gray, "255\n");
+
+    fwrite(string_gray, sizeof(TYPE_CONV), 4*3*lines, file); 
+
+    fprintf(file_color, "P3\n");
+    fprintf(file_color, "%d %d \n", lines, lines);
+    fprintf(file_color, "255\n");
+
+    fwrite(string_color, sizeof(TYPE_ATTR), 4*3*lines, file);    
+         
 
     free(attractors[ix]);
     free(convergences[ix]);
@@ -261,6 +281,16 @@ main_thrd_check(
 
  //Vill vi stänga filen här?                                                                                                                                                            
  fclose(file);
+ free(colorEntries);
+ free(color);
+ free(grayscaleEntries);
+ free(grayscale);
+ free(pixelBufferGrayEntries);
+ free(pixelBufferGray);
+ //free(pixelBufferColorEntries);
+ //free(pixelBufferColor);
+
+
  return 0;
 }
 
@@ -341,13 +371,8 @@ for ( int tx = 0; tx < numThreads; ++tx ) {
     thrds_info[tx].attractors = attractors;
     thrds_info[tx].convergences = convergences;
     thrds_info[tx].roots=roots;
-    thrds_info[tx].numThreads = numThreads; //Casta till const? 
-                                                                                                                                                                                        
-    thrds_info[tx].ib = ib; //Ska vi casta till const? 
-                                                                                                                                                                                        
-    thrds_info[tx].ie = ie; //Ska vi casta till const?                                                                                                                                  
+    thrds_info[tx].numThreads = numThreads; //Casta till const?                                                                                                                                  
     thrds_info[tx].d = d;
-    thrds_info[tx].stepSize = stepSize;
     thrds_info[tx].lines = lines; //Size of vectors in v
                                                                                                                                                                                         
     thrds_info[tx].tx = tx; //Thread index 
@@ -427,39 +452,39 @@ void GetRoots( float ** roots, int d) {
 
 }
 
-void StepLength(double complex z,double complex nom,double complex denom, int d) {
+void FunctionDerivate(double complex z, int d) {
 
     switch (d) {
     case 1:
-        nom = z - 1;
-        denom = 1;
+        derivate = 1;
+	break;
     case 2:
-        nom = z*z - 1;
-        denom = 2*z;
+	derivate = 2*z;
+	break;
     case 3:
-        nom = z*z*z - 1;
-        denom = 3*z*z;
+        derivate = 3*z*z;
+	break;
     case 4:
-        nom = z*z*z*z - 1;
-        denom = 4*z*z*z;
+	derivate = 4*z*z*z;
+	break;
     case 5:
-        nom = z*z*z*z*z - 1;
-        denom = 5*z*z*z*z;
+        derivate = 5*z*z*z*z;
+	break;
     case 6:
-        nom = z*z*z*z*z*z - 1;
-        denom = 6*z*z*z*z*z;
+        derivate = 6*z*z*z*z*z;
+	break;
     case 7:
-        nom = z*z*z*z*z*z*z - 1;
-        denom = 7*z*z*z*z*z*z;
+        derivate = 7*z*z*z*z*z*z;
+	break;
     case 8:
-        nom = z*z*z*z*z*z*z*z - 1;
-        denom = 8*z*z*z*z*z*z*z;
+        derivate = 8*z*z*z*z*z*z*z;
+	break;
     case 9:
-        nom = z*z*z*z*z*z*z*z*z - 1;
-        denom = 9*z*z*z*z*z*z*z*z;
+         derivate = 9*z*z*z*z*z*z*z*z;
+	break;
     case 10:
-        nom = z*z*z*z*z*z*z*z*z*z - 1;
-        denom = 10*z*z*z*z*z*z*z*z*z;
+        derivate = 10*z*z*z*z*z*z*z*z*z;
+	break;
 
     default:
         fprintf(stderr, "unexpected degree\n");
@@ -467,26 +492,31 @@ void StepLength(double complex z,double complex nom,double complex denom, int d)
     }
 }
 
-void GetColors( TYPE_CONV** color, int d){
-    int stepSize = 255;
-
-    //Hård koda alloceringen istället??                                                                                                                                                 
-     for( size_t ix = 0; ix < (d + 1); ix++) {
-            color[ix][0] = stepSize - 10*ix;
-            color[ix][1] = stepSize - 5*ix;
-            color[ix][2] = stepSize - 20*ix;
-            }
-
+void GetColors( char** color, int d){
+                                                                                                                                
+    color[0] = "255 0   0   ";
+    color[1] = "0   255 0   ";
+    color[2] = "0   0   255 ";
+    color[3] = "255 255 0   ";
+    color[4] = "255 0   255 ";
+    color[5] = "0   255 255 ";
+    color[6] = "0   0   0   ";
+    color[7] = "255 255 255 ";
+    color[8] = "100 0   0   ";
+    color[9] = "0   100 0   ";
+    color[10] = "0   0   100 ";
+    color[11] = "100 100 0   ";
 }
 
-void GetGrayScale( TYPE_ATTR** grayscale, int d){
-    double step = 255.0 / (d+1);
-    int stepSize = (int)(stepSize - 0.5);
+void GetGrayScale( char** grayscale, int d){
+    int stepSize = 255;
+    int grayValue;
+    char grayElement[12];
 
-     for( size_t ix = 0; ix < (d + 1); ix++) {
-            grayscale[ix][0] = ix * stepSize;
-            grayscale[ix][1] = ix * stepSize;
-            grayscale[ix][2] = ix * stepSize;
+     for( size_t ix = 0; ix < 128; ix++) {
+	grayValue = stepsize - ix*2;
+	snprintf(grayElement,sizeof(grayElement), "%3d %3d %3d", grayValue, greyValue,grayValue);
+	grayscale[ix]=grayElement;
     }
 
 }
