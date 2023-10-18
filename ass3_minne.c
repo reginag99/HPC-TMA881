@@ -275,7 +275,7 @@ main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    for (int i = 1; i < 3; i++) {
+    for (int i = 1; i < 4; i++) {
         if (strncmp(argv[i], "-t", 2) == 0) { //strncmp checks the argument 1 to 3                                                                                                      
             numThreads = atoi(argv[i] + 2); //add 2 to get the number after "-t"                                                                                                        
         } else if (strncmp(argv[i], "-l", 2) == 0) {
@@ -293,13 +293,13 @@ main(int argc, char *argv[])
   printf("d = %d \n", d);
 
 float *rootsEntries = (float*) malloc(sizeof(float)* d * 2);
-float ** roots = (float**) malloc(sizeof(float*)* 2); //Rätt?                                                                                                                           
+float ** roots = (float**) malloc(sizeof(float*)* d); //Rätt?                                                                                                                           
 
-for ( size_t ix = 0, jx = 0; ix < 2; ++ix, jx+=d)
+for ( size_t ix = 0, jx = 0; ix < d; ++ix, jx+=2)
     roots[ix] = rootsEntries + jx;
 
-for ( size_t ix = 0; ix < 2; ++ix )
-    for ( size_t jx = 0; jx < d; ++jx )
+for ( size_t ix = 0; ix < d; ++ix )
+    for ( size_t jx = 0; jx < 2; ++jx )
         roots[ix][jx] = 0; 
 
 //Tar ut rötterna för polynomet                                                                                                                                                         
@@ -405,7 +405,7 @@ void GetRoots( float ** roots, int d) {
         roots[1][1] = 0.;
 
      if (d > 2){
-        for( size_t ix = 2; ix < d; ix++) {
+        for( size_t ix = 1; ix < d; ix++) {
             float theta = (ix*2* PI) / d ;
             roots[ix][0] = cos(theta);
             roots[ix][1] = sin(theta);
