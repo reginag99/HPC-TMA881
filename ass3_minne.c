@@ -8,8 +8,8 @@
 #include <stdint.h>
 
 #define PI 3.14159//265358979323846;                                                                                                                                                    
-typedef uint8_t TYPE_ATTR;
-typedef uint8_t TYPE_CONV;
+typedef unsigned char TYPE_ATTR;
+typedef unsigned char TYPE_CONV;
 
 struct result{
     double complex nom;
@@ -18,6 +18,9 @@ struct result{
 
 TYPE_ATTR ** attractors;
 TYPE_CONV ** convergences;
+
+TYPE_ATTR * attractor;
+TYPE_CONV * convergence;
 
 void StepLength(double complex z,double complex nom,double complex denom, int d);
 void GetRoots( float ** roots,  int d);
@@ -59,8 +62,10 @@ typedef struct {
 int main_thrd(void *args)
 {
   const thrd_info_t *thrd_info = (thrd_info_t*) args;
-  TYPE_ATTR **attractors = thrd_info->attractors; //Bytt typ till int, Ska bytas till färg, koordingater för testning, ska bli globala                                                                                                                                                                                                                            
-  TYPE_CONV **convergences = thrd_info->convergences; //Bytt typ till int, Ska bytas till antalet, koordinater för testning, ska bli globala                                                                                                                                                                                      
+  TYPE_ATTR **attractors = thrd_info->attractors; //Bytt typ till int, Ska bytas till färg, koordingater för testning, ska bli globala                                                 \
+                                                                                                                                                                                        
+  TYPE_CONV **convergences = thrd_info->convergences; //Bytt typ till int, Ska bytas till antalet, koordinater för testning, ska bli globala                                           \
+                                                                                                                                                                                        
   float**roots = thrd_info->roots;
   int numThreads = thrd_info->numThreads;
   double ib = thrd_info->ib;
@@ -76,32 +81,30 @@ int main_thrd(void *args)
   int i, j, k;
   double ix, jx;
   double complex z,nom,denom;
+
+  //Warn: Vi tror koordinaterna funkar som de ska ej 100% säkra                                                                                                                         
+  //Kolla så att itereringen är rätt isf                                                                                                                                                
+  //Spara bara siffran för roten. Det är inte så många olika rötter. 8 rötter behöver                                                                                                  \
+                                                                                                                                                                                        
+  //inget större än en character  
   
-  for (i = tx; i < lines; i += numThreads) {                 \
-	ix = 2.0 - (4.0*i/(lines-1));                                                                                                                                            
+  for (i = tx, ix = ib; i < lines, ix >= ie; i += numThreads, ix -= (stepSize*numThreads)) { //Skickar in vart vi börjar i ib!                                                         \
+                                                                                                                                                                                        
     TYPE_ATTR*attractor = (TYPE_ATTR *) malloc(lines*sizeof(TYPE_ATTR)); //Vill vi initiera till -1                                                                                     
     TYPE_CONV*convergence = (TYPE_CONV *) malloc(lines*sizeof(TYPE_CONV));
-
-    if(!attractor || !convergence) {
-    // Handle allocation failure, e.g., print an error message and exit.
-    fprintf(stderr, "Memory allocation failed!\n");
-    exit(1);
-}
 
     for ( size_t cx = 0; cx < lines; ++cx ) {
         attractor[cx] = 0;
         convergence[cx] = 0;
         }
 
-    for ( j = 0; j < lines; ++j){
-	    jx = -2.0 + (4.0*i/(lines-1)); 
+    for ( j = 0, jx = -2.; j < lines, jx <= 2.; ++j , jx += (stepSize*numThreads)){
        z = ix + jx * I;
        //Print worked here!!                                                                                                                                                            
        for (k = 0; k < 128; k++){
             //Ifsats kolla om x är nära origin                                                                                                                                          
             if (0.001 < creal(z)  && creal(z) > 0.001 || 0.001 < cimag(z)  && cimag(z) > 0.001 ){
-               printf("%d",d);
-		convergence[j] = d + 1;
+                convergence[j] = d + 1;
                 break;
             }
             //Kolla om real or img part is bigger than 10^10                                                                                                                            
@@ -127,7 +130,7 @@ int main_thrd(void *args)
             }
 
             if (k == 128){
-                 convergence[j] = d + 1;
+                 convergence [j] = d + 1;
             }
             z = z - nom/denom;
             //Print does not work here!!                                                                                                                                                
@@ -143,6 +146,13 @@ int main_thrd(void *args)
     convergences[i] = convergence; //Detta är data transfer? Hur garanterar vi att den skriver på rätt rad?                                                                             
 
     status[tx].val = i + tx;
+    //Matris med antalet trådar rader varje tråd lägger sin rad i sin kolumn?                                                                                                          \
+                                                                                                                                                                                        
+    //Varje tråd lägger sin pixel i sin column.                                                                                                                                        \
+                                                                                                                                                                                        
+    // Vill vi göra data transfer här??                                                                                                                                                \
+                                                                                                                                                                                        
+    // Vi kan skicka iväg tråden :)                                                                                                                                                    \
                                                                                                                                                                                         
     mtx_unlock(mtx);
     cnd_signal(cnd);
@@ -175,7 +185,7 @@ main_thrd_check(
 
   TYPE_ATTR *colorEntries = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* (d + 1)* 3);
   TYPE_ATTR** color = (TYPE_ATTR**) malloc(sizeof(TYPE_ATTR*) * 3);
-  
+
   for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
         color[ix] = colorEntries + jx;
 
