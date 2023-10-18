@@ -394,3 +394,100 @@ for ( int tx = 0; tx < numThreads; ++tx ) {
 return 0;
 
 }    
+
+void GetRoots( float ** roots, int d) {
+     // Hårdkoda de riktiga rötterna alltså 1 och -1?                                                                                                                                   
+     // Beror på om d är jämnt eller ej                                                                                                                                                 
+    if (d % 2 == 0) {
+        roots[0][0] = 1.;
+        roots[0][1] = 0.;
+        roots[1][0] = -1.;
+        roots[1][1] = 0.;
+
+     if (d > 2){
+        for( size_t ix = 2; ix < d; ix++) {
+            float theta = (ix*2* PI) / d ;
+            roots[ix][0] = cos(theta);
+            roots[ix][1] = sin(theta);
+        }
+    }
+
+    } else {
+        roots[0][0] = 1.;
+        roots[0][1] = 0.;
+
+        if (d > 1){
+        for( size_t ix = 2; ix < d; ix++) {
+            float theta = (ix*2* PI) / d ;
+            roots[ix][0] = cos(theta);
+            roots[ix][1] = sin(theta);
+            }
+        }
+    }
+
+}
+
+void StepLength(double complex z,double complex nom,double complex denom, int d) {
+
+    switch (d) {
+    case 1:
+        nom = z - 1;
+        denom = 1;
+    case 2:
+        nom = z*z - 1;
+        denom = 2*z;
+    case 3:
+        nom = z*z*z - 1;
+        denom = 3*z*z;
+    case 4:
+        nom = z*z*z*z - 1;
+        denom = 4*z*z*z;
+    case 5:
+        nom = z*z*z*z*z - 1;
+        denom = 5*z*z*z*z;
+    case 6:
+        nom = z*z*z*z*z*z - 1;
+        denom = 6*z*z*z*z*z;
+    case 7:
+        nom = z*z*z*z*z*z*z - 1;
+        denom = 7*z*z*z*z*z*z;
+    case 8:
+        nom = z*z*z*z*z*z*z*z - 1;
+        denom = 8*z*z*z*z*z*z*z;
+    case 9:
+        nom = z*z*z*z*z*z*z*z*z - 1;
+        denom = 9*z*z*z*z*z*z*z*z;
+    case 10:
+        nom = z*z*z*z*z*z*z*z*z*z - 1;
+        denom = 10*z*z*z*z*z*z*z*z*z;
+
+    default:
+        fprintf(stderr, "unexpected degree\n");
+        exit(1);
+    }
+}
+
+void GetColors( TYPE_CONV** color, int d){
+    int stepSize = 255;
+
+    //Hård koda alloceringen istället??                                                                                                                                                 
+     for( size_t ix = 0; ix < (d + 1); ix++) {
+            color[ix][0] = stepSize - 10*ix;
+            color[ix][1] = stepSize - 5*ix;
+            color[ix][2] = stepSize - 20*ix;
+            }
+
+}
+
+void GetGrayScale( TYPE_ATTR** grayscale, int d){
+    double step = 255.0 / (d+1);
+    int stepSize = (int)(stepSize - 0.5);
+
+     for( size_t ix = 0; ix < (d + 1); ix++) {
+            grayscale[ix][0] = ix * stepSize;
+            grayscale[ix][1] = ix * stepSize;
+            grayscale[ix][2] = ix * stepSize;
+    }
+
+}
+
