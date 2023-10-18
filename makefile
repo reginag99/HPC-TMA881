@@ -1,3 +1,9 @@
+BINS = none atomic mutex reduction spin condvar semaphore
+CFLAGS = -O2 -g
+
+.PHONY : all
+all : $(BINS)
+
 read_in : read_in.c
 	gcc -o $@ $< -O1 -g
 ellens : ellens.c
@@ -19,5 +25,4 @@ Assignment3 : Assignment3.c
 	gcc -o $@ $< -O2 -g
 
 ass3_minne : ass3_minne.c
-	gcc -o $@ $< -O2 -g
-
+	gcc $(CFLAGS) -o $@ $< -lpthread

@@ -24,8 +24,8 @@ TYPE_CONV * convergence;
 
 void StepLength(double complex z,double complex nom,double complex denom, int d);
 void GetRoots( float ** roots,  int d);
-//void GetColors(TYPE_CONV** color, int d);
-//void GetGrayScale(TYPE_ATTR**grayscale, int d);
+void GetColors(TYPE_CONV** color, int d);
+void GetGrayScale(TYPE_ATTR**grayscale, int d);
 
 typedef struct {
   int val;
@@ -183,29 +183,31 @@ main_thrd_check(
     exit(EXIT_FAILURE);
     }
 
-    //Flytta till funktion??
-    // create colour matrix
-    int colour_index = 11;
-    int colour_coordinates = 3;
-    int colour_array[colour_index][colour_coordinates] = {
-        {255, 0, 0}
-        {0, 255, 0}
-        {0, 0, 255}
-        {255, 255, 0}
-        {0, 255, 255}
-        {255, 0, 255}
-        {255, 255, 255}
-        {0, 0, 0}
-        {100, 0, 100}
-        {100, 100, 0}
-        {0, 100, 100}
-    };
+  TYPE_ATTR *colorEntries = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* (d + 1)* 3);
+  TYPE_ATTR** color = (TYPE_ATTR**) malloc(sizeof(TYPE_ATTR*) * 3);
 
-//create gray matrix
-    int gray_index = 128;
-    int grey_step = 255/gray_index;
-    int gray_coordinates = 3;  
-    int gray_array[gray_index][gray_coordinates];
+  for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
+        color[ix] = colorEntries + jx;
+
+  GetColors(color, d);
+
+  TYPE_CONV *grayscaleEntries = (TYPE_CONV*) malloc(sizeof(TYPE_CONV)* (d + 1)* 3);
+  TYPE_CONV** grayscale = (TYPE_CONV**) malloc(sizeof(TYPE_CONV*) * 3);
+
+  for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
+        grayscale[ix] = grayscaleEntries + jx;
+
+  GetGrayScale(grayscale, d);
+  printf("%d", grayscale);
+
+  TYPE_CONV* pixelBufferGrayEntries = (TYPE_CONV*) malloc(sizeof(TYPE_CONV)* lines * 3);
+  TYPE_CONV**pixelBufferGray= (TYPE_CONV**) malloc(sizeof(TYPE_CONV*) * lines);
+
+  for ( size_t ix = 0, jx = 0; ix < lines; ++ix, jx+= 3)
+    pixelBufferGray[ix] = pixelBufferGrayEntries + jx;
+
+
+  TYPE_ATTR*pixelBufferColor = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* lines);
 
   int grayIndex, colorIndex;
   TYPE_CONV Rg,Gg,Bg;
@@ -226,33 +228,26 @@ main_thrd_check(
          }
       }
 
-    //fprintf(stderr, "checking until %i\n", ibnd);
+    //fprintf(stderr, "checking until %i\n", ibnd); 
 
     for ( ; ix < ibnd; ++ix ) {
-        for(jx = 0; jx < lines; ++jx){
+        for(int jx = 0; jx < lines; ++jx){
             grayIndex = attractors[ix][jx];
             colorIndex = attractors[ix][jx];
 
-            Rc = colour_array[colorIndex][0];
-            Gc = colour_array[colorIndex][1];
-            Bc = colour_array[colorIndex][2];
-            
-            Rg = gray_index*grey_step;
-            Gg = gray_index*grey_step;
-            Bg = gray_index*grey_step;
+            Rc = color[colorIndex][0];
+            Gc = color[colorIndex][1];
+            Bc = color[colorIndex][2];
 
-            //WARN: Allocate memory for these
-            pixelBufferGray[jx] = [Rg,Gg,Bg];
-            //pixelBuffer[jx] = [Rc,Gc,Bc];
+            Rg = grayscale[grayIndex][0];
+            Gg = grayscale[grayIndex][1];
+            Bg = grayscale[grayIndex][2];
+            //Skriv till en buffer                                                                                                                                                      
 
-            //Hämta ut de 3 värdena på färgerna
-            //Skriv till en buffer
+            pixelBufferGray[jx][0] = Rg;
+            pixelBufferGray[jx][1] = Gg;
+            pixelBufferGray[jx][2] = Bg;
         }
-    //Här skriver vi hela buffer till filen!!
-    //Pixel buffer har samma storlek som lines!
-    fwrite(pixelBufferGray, sizeof(pixel), strlen(pixelBufferGray), file);
-    //fwrite(pixelBuffer, sizeof(pixel), strlen(pixelBuffer), file);
-    //Måste vi tömma pixelbuffer efter varje iteration?
     //Här skriver vi hela buffer till filen!!                                                                                                                                           
     //Pixel buffer har samma storlek som lines!                                                                                                                                         
     //fwrite(pixelBufferGray, sizeof(TYPE_CONV), lines, file);                                                                                                                          
@@ -400,65 +395,9 @@ return 0;
 
 }    
 
-
-double complex StepLength(double complex z, int d) {
-    struct TwoValues result;
-
-    result.value1 = 42;
-    result.value2 = 99;
-    return result;
-
-    switch (d) {
-    case 1:
-        result.nom = x - 1;
-        result.denom = 1;
-        return result;
-    case 2:
-        result.nom = x*x - 1;
-        result.denom = 2*x;
-        return result;
-    case 3:
-        result.nom = x*x*x - 1;
-        result.denom = 3*x*x;
-        return result;
-    case 4:
-        result.nom = x*x*x*x - 1;
-        result.denom = 4*x*x*x;
-        return result;
-    case 5:
-        result.nom = x*x*x*x*x - 1;
-        result.denom = 5*x*x*x*x;
-        return result;
-    case 6:
-        result.nom = x*x*x*x*x*x - 1;
-        result.denom = 6*x*x*x*x*x;
-        return result;
-    case 7:
-        result.nom = x*x*x*x*x*x*x - 1;
-        result.denom = 7*x*x*x*x*x*x;
-        return result; 
-    case 8:
-        result.nom = x*x*x*x*x*x*x*x - 1;
-        result.denom = 8*x*x*x*x*x*x*x;
-        return result;
-    case 9:
-        result.nom = x*x*x*x*x*x*x*x*x - 1;
-        result.denom = 9*x*x*x*x*x*x*x*x;
-        return result;  
-    case 10:
-        result.nom = x*x*x*x*x*x*x*x*x*x - 1;
-        result.denom = 10*x*x*x*x*x*x*x*x*x;
-        return result;
-    
-    default:
-        fprintf(stderr, "unexpected degree\n");
-        exit(1);
-    }
-
-}
 void GetRoots( float ** roots, int d) {
-     // Hårdkoda de riktiga rötterna alltså 1 och -1? 
-     // Beror på om d är jämnt eller ej
+     // Hårdkoda de riktiga rötterna alltså 1 och -1?                                                                                                                                   
+     // Beror på om d är jämnt eller ej                                                                                                                                                 
     if (d % 2 == 0) {
         roots[0][0] = 1.;
         roots[0][1] = 0.;
@@ -467,63 +406,87 @@ void GetRoots( float ** roots, int d) {
 
      if (d > 2){
         for( size_t ix = 2; ix < d; ix++) {
-            float theta = (ix*2* PI) / d ;        
+            float theta = (ix*2* PI) / d ;
             roots[ix][0] = cos(theta);
             roots[ix][1] = sin(theta);
         }
     }
 
     } else {
-        roots[0][0] = 1.; 
+        roots[0][0] = 1.;
         roots[0][1] = 0.;
 
         if (d > 1){
         for( size_t ix = 2; ix < d; ix++) {
-            float theta = (ix*2* PI) / d ;        
+            float theta = (ix*2* PI) / d ;
             roots[ix][0] = cos(theta);
             roots[ix][1] = sin(theta);
             }
-        } 
+        }
     }
 
 }
-/*
-void GetColors(TYPE_CONV** color, int d);{
-TYPE_ATTR *colorEntries = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* (d + 1)* 3);
-TYPE_ATTR** color = (TYPE_ATTR**) malloc(sizeof(TYPE_ATTR*) * 3);
 
-for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
-  color[ix] = colorEntries + jx;
+void StepLength(double complex z,double complex nom,double complex denom, int d) {
 
+    switch (d) {
+    case 1:
+        nom = z - 1;
+        denom = 1;
+    case 2:
+        nom = z*z - 1;
+        denom = 2*z;
+    case 3:
+        nom = z*z*z - 1;
+        denom = 3*z*z;
+    case 4:
+        nom = z*z*z*z - 1;
+        denom = 4*z*z*z;
+    case 5:
+        nom = z*z*z*z*z - 1;
+        denom = 5*z*z*z*z;
+    case 6:
+        nom = z*z*z*z*z*z - 1;
+        denom = 6*z*z*z*z*z;
+    case 7:
+        nom = z*z*z*z*z*z*z - 1;
+        denom = 7*z*z*z*z*z*z;
+    case 8:
+        nom = z*z*z*z*z*z*z*z - 1;
+        denom = 8*z*z*z*z*z*z*z;
+    case 9:
+        nom = z*z*z*z*z*z*z*z*z - 1;
+        denom = 9*z*z*z*z*z*z*z*z;
+    case 10:
+        nom = z*z*z*z*z*z*z*z*z*z - 1;
+        denom = 10*z*z*z*z*z*z*z*z*z;
 
-    color = {
-        {255, 0, 0}
-        {0, 255, 0}
-        {0, 0, 255}
-        {255, 255, 0}
-        {0, 255, 255}
-        {255, 0, 255}
-        {255, 255, 255}
-        {0, 0, 0}
-        {100, 0, 100}
-        {100, 100, 0}
-        {0, 100, 100}
-    };
+    default:
+        fprintf(stderr, "unexpected degree\n");
+        exit(1);
+    }
 }
 
+void GetColors( TYPE_CONV** color, int d){
+    int stepSize = 255;
 
- 
+    //Hård koda alloceringen istället??                                                                                                                                                 
+     for( size_t ix = 0; ix < (d + 1); ix++) {
+            color[ix][0] = stepSize - 10*ix;
+            color[ix][1] = stepSize - 5*ix;
+            color[ix][2] = stepSize - 20*ix;
+            }
 
+}
 
+void GetGrayScale( TYPE_ATTR** grayscale, int d){
+    double step = 255.0 / (d+1);
+    int stepSize = (int)(stepSize - 0.5);
 
-  //GetColors(color, d);
+     for( size_t ix = 0; ix < (d + 1); ix++) {
+            grayscale[ix][0] = ix * stepSize;
+            grayscale[ix][1] = ix * stepSize;
+            grayscale[ix][2] = ix * stepSize;
+    }
 
-  TYPE_CONV *grayscaleEntries = (TYPE_CONV*) malloc(sizeof(TYPE_CONV)* (d + 1)* 3);
-  TYPE_CONV** grayscale = (TYPE_CONV**) malloc(sizeof(TYPE_CONV*) * 3);
-
-  for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
-        grayscale[ix] = grayscaleEntries + jx;
-
-
-void GetGrayScale(TYPE_ATTR**grayscale, int d);
-*/
+}
