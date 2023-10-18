@@ -14,3 +14,6 @@ Ass2OpenMP : Ass2OpenMP.c
 
 Idas : Idas.c
 	gcc -o $@ $< -O2 -g
+
+Assignment3 : Assignment3.c
+	gcc -o $@ $< -O2 -g

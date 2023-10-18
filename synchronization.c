@@ -5,7 +5,6 @@
 #include <time.h>
 #include <threads.h>
 
-#define PI 3.14159265358979323846 
 
 typedef struct {
   int val;
@@ -133,68 +132,30 @@ main_thrd_check(
 }
 
 int
-main(int argc, char *argv[])
-{ 
-
- int lines, numThreads, d;
-
-    if (argc != 3 && argc != 4) {
-        printf("Two or three arguments expected");
-        exit(EXIT_FAILURE);
-    }
-
-    for (int i = 1; i < 3; i++) { 
-        if (strncmp(argv[i], "-t", 2) == 0) { //strncmp checks the argument 1 to 3
-            numThreads = atoi(argv[i] + 2); //add 2 to get the number after "-t"
-        } else if (strncmp(argv[i], "-l", 2) == 0) {
-            lines = atoi(argv[i] + 2); 
-        } else if (strncmp(argv[i], "", 0) == 0) {
-            d = atoi(argv[i] + 0);
-          
-        } else {
-            printf("Wrong format\n");
-            return 1;
-        }   
-    }
-
-//För rötterna skapar matrs storlek = d * 2. AHA DÅ VI HAR EN KOLUMN FÖR KOMPLEXA OCH EN FÖR REELA
-float *rootsEntries = (float*) malloc(sizeof(float)* d * 2);
-float ** roots = (float**) malloc(sizeof(float)* d); //Rätt?
-
-for ( size_t ix = 0, jx = 0; ix < d; ++ix, jx+=2)
-    roots[ix] = rootsEntries + jx;
-
-for ( size_t ix = 0; ix < d; ++ix )
-    for ( size_t jx = 0; jx < 2; ++jx )
-        roots[ix][jx] = 0;
-
-    
-    //Tar ut rötterna för polynomet
-GetRoots( float ** roots, int d);
-
-
-const float lines = 100.;
-double stepSize = 1/lines;
-int numThreads = 10;
-const double sz = lines/numThreads; //Används ej!                                                                                                                                       
-double **wReal = (double**) malloc(lines*sizeof(double*));
-double **wImg = (double**) malloc(lines*sizeof(double*));
-thrd_t thrds[numThreads];
-thrd_info_t thrds_info[numThreads];
+main()
+{
+  const float lines = 100.;
+  double stepSize = 1/lines;
+  int numThreads = 10;
+  const double sz = lines/numThreads; //Används ej!                                                                                                                                       
+  double **wReal = (double**) malloc(lines*sizeof(double*));
+  double **wImg = (double**) malloc(lines*sizeof(double*));
+  thrd_t thrds[numThreads];
+  thrd_info_t thrds_info[numThreads];
 
   //Creating object for thread checks                                                                                                                                                     
-thrd_t thrd_check;
-thrd_info_check_t thrd_info_check;
+  thrd_t thrd_check;
+  thrd_info_check_t thrd_info_check;
 
   //Initialize mutex                                                                                                                                                                      
-mtx_t mtx;
-mtx_init(&mtx, mtx_plain);
+  mtx_t mtx;
+  mtx_init(&mtx, mtx_plain);
 
   //Initialize contitional variables                                                                                                                                                      
-cnd_t cnd;
-cnd_init(&cnd);
+  cnd_t cnd;
+  cnd_init(&cnd);
 
-int_padded status[numThreads];
+  int_padded status[numThreads];
 
 //Vi skickar iväg trådarna 1 gång!! Varje tråd 1 gång med 1 ib!!                                                                                                                          
 // tx 0 ib = 2, tx 1 ib = 2-1/stepSize ...                                                                                                                                                
@@ -251,30 +212,6 @@ int_padded status[numThreads];
 
 }
 
-//WARN: Är detta rätt? Vill man inlina funktionen?
-void GetRoots( float ** roots, int d) {
-     // Hårdkoda de riktiga rötterna alltså 1 och -1? 
-     // Beror på om d är jämnt eller ej
-    if (d % 2 == 0) {
-        roots[0][0] = 1.;
-        roots[0][1] = 0.;
-        roots[1][0] = -1.;
-        roots[1][1] = 0.;
-
-    } else {
-        roots[0][0] = 1.; 
-        roots[0][1] = 0.;
-    }
-
-    //TODO: Hitta de andra rötterna! De Moivre's Theorem?
-    if (d > 2){
-        for( size_t ix = 2; ix < d; ix++) {
-            float theta = (ix*2* PI) / d ;        
-            roots[ix][0] = cos(theta);
-            roots[ix][1] = sin(theta);
-        }
-    }
-}
 
 
 
