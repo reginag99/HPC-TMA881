@@ -25,4 +25,8 @@ Assignment3 : Assignment3.c
 	gcc -o $@ $< -O2 -g
 
 ass3_minne : ass3_minne.c
-	gcc $(CFLAGS) -o $@ $< -lpthread
+	gcc $(CFLAGS) -o $@ $< -lpthread -lm
+
+.PHONY : clean
+clean :
+	rm -rf $(BINS)
