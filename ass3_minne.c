@@ -183,6 +183,8 @@ main_thrd_check(
     exit(EXIT_FAILURE);
     }
 
+    //Flytta till funktion??
+    // create colour matrix
     int colour_index = 11;
     int colour_coordinates = 3;
     int colour_array[colour_index][colour_coordinates] = {
@@ -202,37 +204,8 @@ main_thrd_check(
 //create gray matrix
     int gray_index = 128;
     int grey_step = 255/gray_index;
-
     int gray_coordinates = 3;  
     int gray_array[gray_index][gray_coordinates];
-
-  int grayIndex, colorIndex;
-/*
-  TYPE_ATTR *colorEntries = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* (d + 1)* 3);
-  TYPE_ATTR** color = (TYPE_ATTR**) malloc(sizeof(TYPE_ATTR*) * 3);
-
-  for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
-        color[ix] = colorEntries + jx;
-
-  //GetColors(color, d);
-
-  TYPE_CONV *grayscaleEntries = (TYPE_CONV*) malloc(sizeof(TYPE_CONV)* (d + 1)* 3);
-  TYPE_CONV** grayscale = (TYPE_CONV**) malloc(sizeof(TYPE_CONV*) * 3);
-
-  for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
-        grayscale[ix] = grayscaleEntries + jx;
-
-  //GetGrayScale(grayscale, d);
-  //printf("%d", grayscale);
-
-  TYPE_CONV* pixelBufferGrayEntries = (TYPE_CONV*) malloc(sizeof(TYPE_CONV)* lines * 3);
-  TYPE_CONV**pixelBufferGray= (TYPE_CONV**) malloc(sizeof(TYPE_CONV*) * lines);
-
-  for ( size_t ix = 0, jx = 0; ix < lines; ++ix, jx+= 3)
-    pixelBufferGray[ix] = pixelBufferGrayEntries + jx;
-
-
-  TYPE_ATTR*pixelBufferColor = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* lines);
 
   int grayIndex, colorIndex;
   TYPE_CONV Rg,Gg,Bg;
@@ -252,27 +225,34 @@ main_thrd_check(
            break;
          }
       }
-*/
-    //fprintf(stderr, "checking until %i\n", ibnd); 
+
+    //fprintf(stderr, "checking until %i\n", ibnd);
 
     for ( ; ix < ibnd; ++ix ) {
-        for(int jx = 0; jx < lines; ++jx){
+        for(jx = 0; jx < lines; ++jx){
             grayIndex = attractors[ix][jx];
             colorIndex = attractors[ix][jx];
 
-            Rc = color[colorIndex][0];
-            Gc = color[colorIndex][1];
-            Bc = color[colorIndex][2];
-
+            Rc = colour_array[colorIndex][0];
+            Gc = colour_array[colorIndex][1];
+            Bc = colour_array[colorIndex][2];
+            
             Rg = gray_index*grey_step;
             Gg = gray_index*grey_step;
             Bg = gray_index*grey_step;
-            //Skriv till en buffer                                                                                                                                                      
 
-            pixelBufferGray[jx][0] = Rg;
-            pixelBufferGray[jx][1] = Gg;
-            pixelBufferGray[jx][2] = Bg;
+            //WARN: Allocate memory for these
+            pixelBufferGray[jx] = [Rg,Gg,Bg];
+            //pixelBuffer[jx] = [Rc,Gc,Bc];
+
+            //Hämta ut de 3 värdena på färgerna
+            //Skriv till en buffer
         }
+    //Här skriver vi hela buffer till filen!!
+    //Pixel buffer har samma storlek som lines!
+    fwrite(pixelBufferGray, sizeof(pixel), strlen(pixelBufferGray), file);
+    //fwrite(pixelBuffer, sizeof(pixel), strlen(pixelBuffer), file);
+    //Måste vi tömma pixelbuffer efter varje iteration?
     //Här skriver vi hela buffer till filen!!                                                                                                                                           
     //Pixel buffer har samma storlek som lines!                                                                                                                                         
     //fwrite(pixelBufferGray, sizeof(TYPE_CONV), lines, file);                                                                                                                          
