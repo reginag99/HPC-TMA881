@@ -71,7 +71,15 @@ int main_thrd(void *args)
   for (i = tx;  i < lines; i += numThreads ) {
     ix = 2.0 - (4.0 * i /(lines - 1));
     TYPE_ATTR*attractor = (TYPE_ATTR*) malloc(lines*sizeof(TYPE_ATTR)); //Hur blir minneshantering här?
+    if (attractor == NULL){
+      printf("Error allocating memory for attractor");
+      return-1;
+    }
     TYPE_CONV*convergence = (TYPE_CONV*) malloc(lines*sizeof(TYPE_CONV)); //Hur blir minneshantering här?
+    if (convergence == NULL){
+      printf("Error allocating memory for convergence");
+      return-1;
+    }
 
     for ( size_t cx = 0; cx < lines; ++cx ) {
         attractor[cx] = d;
@@ -139,6 +147,10 @@ main_thrd_check(
   int_padded *status = thrd_info->status;
 
   char*colorEntries = (char*) malloc(sizeof(char)* 12 * 11);
+  if (colorEntries == NULL){
+      printf("Error allocating memory for colorEntries");
+      return-1;
+    }
   char**color = (char**) malloc(sizeof(char*)*11);
 
   for ( size_t ix = 0, jx = 0; ix < 11; ++ix, jx+=21)
@@ -148,6 +160,10 @@ main_thrd_check(
   printf("color = %d\n",color[0][0]);
  
   char*grayscaleEntries = (char*) malloc(sizeof(char)* 12 * 128);
+  if (grayscaleEntries == NULL){
+      printf("Error allocating memory for grayscaleEntries");
+      return-1;
+    }
   char**grayscale = (char**) malloc(sizeof(char*)*128);
 
   for ( size_t ix = 0, jx = 0; ix < 128; ++ix, jx+=12)
@@ -157,6 +173,10 @@ main_thrd_check(
   printf("gray = %d\n",grayscale[0][0]);
 
   char*pixelBufferGrayEntries = (char*) malloc(sizeof(char)*12*lines);
+  if (pixelBufferGrayEntries == NULL){
+      printf("Error allocating memory for pixelbuffergrayEntries");
+      return-1;
+    }
   char**pixelBufferGray = (char**) malloc(sizeof(char*)* lines);
 
   for ( size_t ix = 0, jx = 0; ix < lines; ++ix, jx+= 12)
@@ -230,13 +250,14 @@ main_thrd_check(
   }
  }
 
- fclose(fileColor);
- free(colorEntries);
- free(color);
- free(pixelBufferGray);
- free(pixelBufferGrayEntries);
- free(grayscale);
- free(grayscaleEntries);
+free(colorEntries);
+free(color);
+free(pixelBufferColor);
+free(pixelBufferColorEntries);
+free(pixelBufferGray);
+free(pixelBufferGrayEntries);
+free(grayscale);
+free(grayscaleEntries);
  return 0;
 }
 
@@ -346,6 +367,17 @@ for ( int tx = 0; tx < numThreads; ++tx ) {
  mtx_destroy(&mtx);
  cnd_destroy(&cnd);
 
+for (int i = 0; i < lines; i++) {
+    free(attractors[i]);
+}
+free(attractors);
+
+for (int i = 0; i < lines; i++) {
+    free(convergences[i]);
+}
+
+ free(rootsEntries);
+ free(roots);
 return 0;
 
 }
