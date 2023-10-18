@@ -24,8 +24,8 @@ TYPE_CONV * convergence;
 
 void StepLength(double complex z,double complex nom,double complex denom, int d);
 void GetRoots( float ** roots,  int d);
-void GetColors(TYPE_CONV** color, int d);
-void GetGrayScale(TYPE_ATTR**grayscale, int d);
+//void GetColors(TYPE_CONV** color, int d);
+//void GetGrayScale(TYPE_ATTR**grayscale, int d);
 
 typedef struct {
   int val;
@@ -183,13 +183,38 @@ main_thrd_check(
     exit(EXIT_FAILURE);
     }
 
+    int colour_index = 11;
+    int colour_coordinates = 3;
+    int colour_array[colour_index][colour_coordinates] = {
+        {255, 0, 0}
+        {0, 255, 0}
+        {0, 0, 255}
+        {255, 255, 0}
+        {0, 255, 255}
+        {255, 0, 255}
+        {255, 255, 255}
+        {0, 0, 0}
+        {100, 0, 100}
+        {100, 100, 0}
+        {0, 100, 100}
+    };
+
+//create gray matrix
+    int gray_index = 128;
+    int grey_step = 255/gray_index;
+
+    int gray_coordinates = 3;  
+    int gray_array[gray_index][gray_coordinates];
+
+  int grayIndex, colorIndex;
+/*
   TYPE_ATTR *colorEntries = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* (d + 1)* 3);
   TYPE_ATTR** color = (TYPE_ATTR**) malloc(sizeof(TYPE_ATTR*) * 3);
 
   for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
         color[ix] = colorEntries + jx;
 
-  GetColors(color, d);
+  //GetColors(color, d);
 
   TYPE_CONV *grayscaleEntries = (TYPE_CONV*) malloc(sizeof(TYPE_CONV)* (d + 1)* 3);
   TYPE_CONV** grayscale = (TYPE_CONV**) malloc(sizeof(TYPE_CONV*) * 3);
@@ -197,8 +222,8 @@ main_thrd_check(
   for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
         grayscale[ix] = grayscaleEntries + jx;
 
-  GetGrayScale(grayscale, d);
-  printf("%d", grayscale);
+  //GetGrayScale(grayscale, d);
+  //printf("%d", grayscale);
 
   TYPE_CONV* pixelBufferGrayEntries = (TYPE_CONV*) malloc(sizeof(TYPE_CONV)* lines * 3);
   TYPE_CONV**pixelBufferGray= (TYPE_CONV**) malloc(sizeof(TYPE_CONV*) * lines);
@@ -227,7 +252,7 @@ main_thrd_check(
            break;
          }
       }
-
+*/
     //fprintf(stderr, "checking until %i\n", ibnd); 
 
     for ( ; ix < ibnd; ++ix ) {
@@ -239,9 +264,9 @@ main_thrd_check(
             Gc = color[colorIndex][1];
             Bc = color[colorIndex][2];
 
-            Rg = grayscale[grayIndex][0];
-            Gg = grayscale[grayIndex][1];
-            Bg = grayscale[grayIndex][2];
+            Rg = gray_index*grey_step;
+            Gg = gray_index*grey_step;
+            Bg = gray_index*grey_step;
             //Skriv till en buffer                                                                                                                                                      
 
             pixelBufferGray[jx][0] = Rg;
@@ -394,3 +419,131 @@ for ( int tx = 0; tx < numThreads; ++tx ) {
 return 0;
 
 }    
+
+
+double complex StepLength(double complex z, int d) {
+    struct TwoValues result;
+
+    result.value1 = 42;
+    result.value2 = 99;
+    return result;
+
+    switch (d) {
+    case 1:
+        result.nom = x - 1;
+        result.denom = 1;
+        return result;
+    case 2:
+        result.nom = x*x - 1;
+        result.denom = 2*x;
+        return result;
+    case 3:
+        result.nom = x*x*x - 1;
+        result.denom = 3*x*x;
+        return result;
+    case 4:
+        result.nom = x*x*x*x - 1;
+        result.denom = 4*x*x*x;
+        return result;
+    case 5:
+        result.nom = x*x*x*x*x - 1;
+        result.denom = 5*x*x*x*x;
+        return result;
+    case 6:
+        result.nom = x*x*x*x*x*x - 1;
+        result.denom = 6*x*x*x*x*x;
+        return result;
+    case 7:
+        result.nom = x*x*x*x*x*x*x - 1;
+        result.denom = 7*x*x*x*x*x*x;
+        return result; 
+    case 8:
+        result.nom = x*x*x*x*x*x*x*x - 1;
+        result.denom = 8*x*x*x*x*x*x*x;
+        return result;
+    case 9:
+        result.nom = x*x*x*x*x*x*x*x*x - 1;
+        result.denom = 9*x*x*x*x*x*x*x*x;
+        return result;  
+    case 10:
+        result.nom = x*x*x*x*x*x*x*x*x*x - 1;
+        result.denom = 10*x*x*x*x*x*x*x*x*x;
+        return result;
+    
+    default:
+        fprintf(stderr, "unexpected degree\n");
+        exit(1);
+    }
+
+}
+void GetRoots( float ** roots, int d) {
+     // Hårdkoda de riktiga rötterna alltså 1 och -1? 
+     // Beror på om d är jämnt eller ej
+    if (d % 2 == 0) {
+        roots[0][0] = 1.;
+        roots[0][1] = 0.;
+        roots[1][0] = -1.;
+        roots[1][1] = 0.;
+
+     if (d > 2){
+        for( size_t ix = 2; ix < d; ix++) {
+            float theta = (ix*2* PI) / d ;        
+            roots[ix][0] = cos(theta);
+            roots[ix][1] = sin(theta);
+        }
+    }
+
+    } else {
+        roots[0][0] = 1.; 
+        roots[0][1] = 0.;
+
+        if (d > 1){
+        for( size_t ix = 2; ix < d; ix++) {
+            float theta = (ix*2* PI) / d ;        
+            roots[ix][0] = cos(theta);
+            roots[ix][1] = sin(theta);
+            }
+        } 
+    }
+
+}
+/*
+void GetColors(TYPE_CONV** color, int d);{
+TYPE_ATTR *colorEntries = (TYPE_ATTR*) malloc(sizeof(TYPE_ATTR)* (d + 1)* 3);
+TYPE_ATTR** color = (TYPE_ATTR**) malloc(sizeof(TYPE_ATTR*) * 3);
+
+for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
+  color[ix] = colorEntries + jx;
+
+
+    color = {
+        {255, 0, 0}
+        {0, 255, 0}
+        {0, 0, 255}
+        {255, 255, 0}
+        {0, 255, 255}
+        {255, 0, 255}
+        {255, 255, 255}
+        {0, 0, 0}
+        {100, 0, 100}
+        {100, 100, 0}
+        {0, 100, 100}
+    };
+}
+
+
+ 
+
+
+
+  //GetColors(color, d);
+
+  TYPE_CONV *grayscaleEntries = (TYPE_CONV*) malloc(sizeof(TYPE_CONV)* (d + 1)* 3);
+  TYPE_CONV** grayscale = (TYPE_CONV**) malloc(sizeof(TYPE_CONV*) * 3);
+
+  for ( size_t ix = 0, jx = 0; ix < 3; ++ix, jx+=(d+1))
+        grayscale[ix] = grayscaleEntries + jx;
+
+
+void GetGrayScale(TYPE_ATTR**grayscale, int d);
+*/

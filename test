@@ -1,0 +1,45 @@
+
+
+
+	//create gray matrix
+    int gray_index = 128;
+    int grey_step = 255/gray_index;
+
+    int gray_coordinates = 3;  
+    int gray_array[gray_index][gray_coordinates];
+
+  int grayIndex, colorIndex;
+
+  for ( int ix = 0, ibnd; ix < lines; ) {
+    for ( mtx_lock(mtx); ; ) {
+      ibnd = lines;
+
+      for ( int tx = 0; tx < numThreads; ++tx )
+         if ( ibnd > status[tx].val )
+            ibnd = status[tx].val;
+         if ( ibnd <= ix )
+            cnd_wait(cnd,mtx);
+         else {
+           mtx_unlock(mtx);
+           break;
+         }
+      }
+
+
+    //fprintf(stderr, "checking until %i\n", ibnd);
+
+
+
+    for ( ; ix < ibnd; ++ix ) {
+        for(jx = 0; jx < lines; ++jx){
+            grayIndex = attractors[ix][jx];
+            colorIndex = attractors[ix][jx];
+
+            R = colour_array[colorIndex][0];
+            G = colour_array[colorIndex][1];
+            B = colour_array[colorIndex][2];
+            
+            Rg = gray_index*grey_step;
+            Gg = gray_index*grey_step;
+            Bg = gray_index*grey_step;
+
