@@ -173,15 +173,15 @@ main_thrd_check(
   char elementGrayScale[12];
 
   //Vart vill vi öppna filen?
-  FILE *file = fopen("output.ppm", "w");
-  if (file == NULL) {
+  FILE *fileColor = fopen("output.ppm", "w");
+  if (fileColor == NULL) {
     perror("Error opening the file");
     exit(EXIT_FAILURE);
     }
 
-  fprintf(file, "P3\n");
-  fprintf(file, "%d %d \n", lines, lines);
-  fprintf(file, "255\n");
+  fprintf(fileColor, "P3\n");
+  fprintf(fileColor, "%d %d \n", lines, lines);
+  fprintf(fileColor, "255\n");
 
   for ( int ix = 0, ibnd; ix < lines; ) {
     for ( mtx_lock(mtx); ; ) {
@@ -211,9 +211,16 @@ main_thrd_check(
            //memcpy(stringGray,grayscale[grayIndex], sizeof(char)*12);
         }
 
+    //fprintf(file_gray, "P3\n");
+    //fprintf(file_gray, "%d %d \n", lines, lines);
+    //fprintf(file_gray, "255\n");
+
+    //fwrite(string_gray, sizeof(TYPE_CONV), 4*3*lines, file); 
+
+    fwrite(stringColor, sizeof(char), 4*3*lines, fileColor);
      //memcpy(stringGray, pixelBufferGray[ix], sizeof(char)*12);
 
-    fwrite(stringColor, sizeof(TYPE_CONV), lines, file);
+   // fwrite(stringColor, sizeof(TYPE_CONV), lines, file);
 
     //fwrite(pixelBuffer, sizeof(char), strlen(pixelBuffer), file);
     //Måste vi tömma pixelbuffer efter varje iteration?
@@ -223,7 +230,7 @@ main_thrd_check(
   }
  }
 
- fclose(file); //Vill vi stänga filen här?
+ fclose(fileColor);
  free(colorEntries);
  free(color);
  free(pixelBufferGray);
