@@ -8,13 +8,13 @@
 #include <stdint.h>
 
 #define PI 3.14159 //265358979323846; NOTE: Hur många värdesiffror?
-typedef char TYPE_ATTR; //This should be char
+typedef int8_t  TYPE_ATTR; //This should be char
 typedef unsigned char TYPE_CONV; //This should be char
 
 TYPE_ATTR ** attractors;
 TYPE_CONV ** convergences;
 
-void FunctionDerivate(double complex z,double complex derivate, int d);
+void FunctionDerivate(double complex *z,double complex *derivate, int d);
 void GetRoots( float ** roots,  int d);
 void GetColors(char**color, int d);
 void GetGrayScale(char**grayscale, int d);
@@ -96,7 +96,7 @@ int main_thrd(void *args)
             if (creal(z) > 1000000000 && creal(z) < -1000000000  || cimag(z) > 1000000000 && cimag(z) < -1000000000)
                 break;
 
-            FunctionDerivate(z,derivate, d);
+            FunctionDerivate(&z,&derivate, d);
             derivateConj = conj(derivate);
             functionValue = derivate * z - 1;
 
@@ -111,9 +111,9 @@ int main_thrd(void *args)
                 }
              break;
             }
-            denom = derivateConj * derivate;
+            denom = derivateConj * derivate * d;
             z = z - (functionValue*derivateConj)/denom; //divison med komplext tal undvika
-            //printf("lf",z);
+            //printf("%lf",z);
        }
        //printf("%d", convergence[j]);
        //fflush(stdout);
@@ -126,7 +126,7 @@ int main_thrd(void *args)
     status[tx].val = i + tx;
     mtx_unlock(mtx);
     cnd_signal(cnd);
-    //thrd_sleep(&(struct timespec){.tv_sec=0, .tv_nsec=10}, NULL);
+    thrd_sleep(&(struct timespec){.tv_sec=0, .tv_nsec=10}, NULL);
    }
   return 0;
 }
@@ -146,48 +146,19 @@ main_thrd_check(
   cnd_t *cnd = thrd_info->cnd;
   int_padded *status = thrd_info->status;
 
-  char*colorEntries = (char*) malloc(sizeof(char)* 12 * 11);
-  if (colorEntries == NULL){
-      printf("Error allocating memory for colorEntries");
-      return-1;
-    }
-  char**color = (char**) malloc(sizeof(char*)*11);
+  char**color = (char**) malloc(sizeof(char*)*12);
 
-  for ( size_t ix = 0, jx = 0; ix < 11; ++ix, jx+=21)
-        color[ix] = colorEntries + jx;
 
   GetColors(color, d);
   printf("color = %d\n",color[0][0]);
- 
-  char*grayscaleEntries = (char*) malloc(sizeof(char)* 12 * 128);
-  if (grayscaleEntries == NULL){
-      printf("Error allocating memory for grayscaleEntries");
-      return-1;
-    }
+  
   char**grayscale = (char**) malloc(sizeof(char*)*128);
 
-  for ( size_t ix = 0, jx = 0; ix < 128; ++ix, jx+=12)
-        grayscale[ix] = grayscaleEntries + jx;
-
-  GetGrayScale(grayscale, d);
+   GetGrayScale(grayscale, d);
   printf("gray = %d\n",grayscale[0][0]);
 
-  char*pixelBufferGrayEntries = (char*) malloc(sizeof(char)*12*lines);
-  if (pixelBufferGrayEntries == NULL){
-      printf("Error allocating memory for pixelbuffergrayEntries");
-      return-1;
-    }
-  char**pixelBufferGray = (char**) malloc(sizeof(char*)* lines);
-
-  for ( size_t ix = 0, jx = 0; ix < lines; ++ix, jx+= 12)
-    pixelBufferGray[ix] = pixelBufferGrayEntries + jx;
-
-  char*pixelBufferColorEntries = (char*) malloc(sizeof(char)*12*lines);
-  char**pixelBufferColor = (char**) malloc(sizeof(char*)*12);
-
-  for ( size_t ix = 0, jx = 0; ix < lines; ++ix, jx+= 12)
-    pixelBufferColor[ix] = pixelBufferColorEntries + jx;
-
+ // char**pixelBufferGray = (char**) malloc(sizeof(char*)* lines);
+  //char**pixelBufferColor = (char**) malloc(sizeof(char*)*12);
   int grayIndex, colorIndex;
   char elementColor[12];
   char elementGrayScale[12];
@@ -202,6 +173,10 @@ main_thrd_check(
   fprintf(fileColor, "P3\n");
   fprintf(fileColor, "%d %d \n", lines, lines);
   fprintf(fileColor, "255\n");
+
+  //fprintf(file_gray, "P3\n");
+  //fprintf(file_gray, "%d %d \n", lines, lines);
+  //fprintf(file_gray, "255\n");
 
   for ( int ix = 0, ibnd; ix < lines; ) {
     for ( mtx_lock(mtx); ; ) {
@@ -226,14 +201,12 @@ main_thrd_check(
     for ( ; ix < ibnd; ++ix ) {
         for(int jx = 0; jx < lines; ++jx){
            //grayIndex = attractors[ix][jx];
-           colorIndex = (int)attractors[ix][jx];
+           colorIndex = convergences[ix][jx];
            memcpy(stringColor,color[colorIndex], sizeof(char)*12);
            //memcpy(stringGray,grayscale[grayIndex], sizeof(char)*12);
         }
 
-    //fprintf(file_gray, "P3\n");
-    //fprintf(file_gray, "%d %d \n", lines, lines);
-    //fprintf(file_gray, "255\n");
+
 
     //fwrite(string_gray, sizeof(TYPE_CONV), 4*3*lines, file); 
 
@@ -250,14 +223,10 @@ main_thrd_check(
   }
  }
 
-free(colorEntries);
 free(color);
-free(pixelBufferColor);
-free(pixelBufferColorEntries);
-free(pixelBufferGray);
-free(pixelBufferGrayEntries);
+//free(pixelBufferColor);
+//free(pixelBufferGray);
 free(grayscale);
-free(grayscaleEntries);
  return 0;
 }
 
@@ -367,14 +336,8 @@ for ( int tx = 0; tx < numThreads; ++tx ) {
  mtx_destroy(&mtx);
  cnd_destroy(&cnd);
 
-for (int i = 0; i < lines; i++) {
-    free(attractors[i]);
-}
 free(attractors);
-
-for (int i = 0; i < lines; i++) {
-    free(convergences[i]);
-}
+free(convergences);
 
  free(rootsEntries);
  free(roots);
@@ -390,38 +353,38 @@ void GetRoots( float ** roots, int d) {
     }
 }
 
-void FunctionDerivate(double complex z,double complex derivate, int d){
+void FunctionDerivate(double complex *z,double complex *derivate, int d){
     switch (d) {
     case 1:
-        derivate = 1;
+        *derivate = 1;
         break;
     case 2:
-        derivate = 2*z;
+        *derivate = (*z);
         break;
     case 3:
-        derivate = 3*z*z;
+        *derivate = (*z)*(*z);
         break;
     case 4:
-        derivate = 4*z*z*z;
+        *derivate = (*z)*(*z)*(*z);
         break;
     case 5:
-        derivate = 5*z*z*z*z;
+        *derivate = (*z)*(*z)*(*z)*(*z);
         break;
     case 6:
-        derivate = 6*z*z*z*z*z;
+        *derivate = (*z)*(*z)*(*z)*(*z)*(*z);
         break;
     case 7:
-        derivate = 7*z*z*z*z*z*z;
-        break;
+        *derivate = (*z)*(*z)*(*z)*(*z)*(*z)*(*z);
+	break;
     case 8:
-        derivate = 8*z*z*z*z*z*z*z;
-        break;
+        *derivate = (*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z);
+	break;
     case 9:
-        derivate = 9*z*z*z*z*z*z*z*z;
-        break;
+        *derivate = (*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z); 
+	break;
     case 10:
-        derivate = 10*z*z*z*z*z*z*z*z*z;
-        break;
+        *derivate = (*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z);
+	break;
 
     default:
         fprintf(stderr, "unexpected degree\n");
@@ -454,7 +417,7 @@ void GetGrayScale(char**grayscale, int d){
     for( size_t ix = 0; ix < 128; ix++) {
             greyValue = stepSize - ix*2;
             snprintf(greyElement, sizeof(greyElement), "%3d %3d %3d", greyValue,greyValue,greyValue);
-            grayscale[ix]= greyElement;
+	    snprintf(grayscale[ix], sizeof(greyElement),"%s",greyElement);
     }
 
 }
