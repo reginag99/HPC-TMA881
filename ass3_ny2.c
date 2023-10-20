@@ -100,7 +100,7 @@ int main_thrd(void *args)
 	float complex diff = 0.001;
 	FunctionDerivate(&diff,&limit,d+1);
 
-	if (creal(functionValue)*creal(functionValue) + cimag(functionValue)*cimag(functionValue) < cimag(limit)){
+	if (creal(functionValue)*creal(functionValue) + cimag(functionValue)*cimag(functionValue) < creal(limit)){
 	  convergence[j] = k;
 	  for(int ixd = 0; ixd < d; ixd++){
 	     if((creal(z) <=  (roots[ixd][0] + 0.001) && creal(z) >=  (roots[ixd][0] - 0.001)) &&
