@@ -1,5 +1,5 @@
 BINS = none atomic mutex reduction spin condvar semaphore
-CFLAGS = -O2 -g
+CFLAGS = -O0 -g
 
 .PHONY : all
 all : $(BINS)
@@ -28,6 +28,9 @@ ass3_minne : ass3_minne.c
 	gcc $(CFLAGS) -o $@ $< -lpthread -lm
 
 ass3_ny : ass3_ny.c
+	gcc $(CFLAGS) -o $@ $< -lpthread -lm
+
+ass3_ny2 : ass3_ny2.c
 	gcc $(CFLAGS) -o $@ $< -lpthread -lm
 
 .PHONY : clean

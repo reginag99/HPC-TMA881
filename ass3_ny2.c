@@ -8,8 +8,8 @@
 #include <stdint.h>
 
 #define PI 3.14159 //265358979323846; NOTE: Hur många värdesiffror?
-typedef int8_t  TYPE_ATTR; //This should be char
-typedef unsigned char TYPE_CONV; //This should be char
+typedef int8_t TYPE_ATTR; //This should be char
+typedef uint8_t TYPE_CONV; //This should be char
 
 TYPE_ATTR ** attractors;
 TYPE_CONV ** convergences;
@@ -54,7 +54,7 @@ int main_thrd(void *args)
   TYPE_ATTR **attractors = thrd_info->attractors;
   TYPE_CONV **convergences = thrd_info->convergences;
   float**roots = thrd_info->roots;
-  int numThreads = thrd_info->numThreads;
+  const int numThreads = thrd_info->numThreads;
   int d = thrd_info->d;
   const int lines = thrd_info->lines;
   const int tx = thrd_info->tx;
@@ -64,22 +64,13 @@ int main_thrd(void *args)
 
   int i, j, k;
   double ix, jx;
-  double complex z,derivate,derivateConj, functionValue, denom;
+  double complex z,derivate,derivateConj,functionValue, denom;
 
   //Warn: Vi tror koordinaterna funkar som de ska ej 100% säkra, kolla så att itereringen är rätt isf
-  //Fel typ?? inget större än en character
   for (i = tx;  i < lines; i += numThreads ) {
     ix = 2.0 - (4.0 * i /(lines - 1));
-    TYPE_ATTR*attractor = (TYPE_ATTR*) malloc(lines*sizeof(TYPE_ATTR)); //Hur blir minneshantering här?
-    if (attractor == NULL){
-      printf("Error allocating memory for attractor");
-      return-1;
-    }
-    TYPE_CONV*convergence = (TYPE_CONV*) malloc(lines*sizeof(TYPE_CONV)); //Hur blir minneshantering här?
-    if (convergence == NULL){
-      printf("Error allocating memory for convergence");
-      return-1;
-    }
+    TYPE_ATTR*attractor = (TYPE_ATTR*) malloc(lines*sizeof(TYPE_ATTR));
+    TYPE_CONV*convergence = (TYPE_CONV*) malloc(lines*sizeof(TYPE_CONV));
 
     for ( size_t cx = 0; cx < lines; ++cx ) {
         attractor[cx] = d;
@@ -91,7 +82,7 @@ int main_thrd(void *args)
        z = ix + jx * I;
        //printf("Complex number z: %lf + %lfi\n", creal(z), cimag(z));
        for (k = 0; k < 128; k++){
-            if (creal(z) < 0.001 && creal(z) > -0.001 || cimag(z) < 0.001  && cimag(z) > -0.001 )
+            if ((creal(z) < 0.001 && creal(z) > -0.001) && (cimag(z) < 0.001  && cimag(z) > -0.001))
                 break;
             if (creal(z) > 1000000000 && creal(z) < -1000000000  || cimag(z) > 1000000000 && cimag(z) < -1000000000)
                 break;
@@ -104,37 +95,38 @@ int main_thrd(void *args)
             if (cabs(functionValue) < 0.001*d && cabs(functionValue) > -0.001*d){
                 convergence[j] = k;
                 for(int ixd = 0; ixd < d; ixd++){
-                    if((creal(z) <=  (roots[ixd][0] + 0.001) || creal(z) >=  (roots[ixd][0] - 0.001)) &&
-                     (cimag(z) <=  (roots[ixd][1] + 0.001) || cimag(z) >=  (roots[ixd][1] - 0.001))){
+                    if((creal(z) <=  (roots[ixd][0] + 0.001) && creal(z) >=  (roots[ixd][0] - 0.001)) &&
+                     (cimag(z) <=  (roots[ixd][1] + 0.001) && cimag(z) >=  (roots[ixd][1] - 0.001))){
                            attractor [j] = ixd;
+			   //printf("ixd: %d", ixd);
                            break;}
                 }
              break;
             }
             denom = derivateConj * derivate * d;
-            z = z - (functionValue*derivateConj)/denom; //divison med komplext tal undvika
-            //printf("%lf",z);
+            if (denom == 0.0){
+              break;
+            }
+            //printf("%d %lf %lf %d\n",tx,creal(z),cimag(z),k);
+            z = z - (functionValue*derivateConj)/denom ;
        }
-       //printf("%d", convergence[j]);
-       //fflush(stdout);
+        //printf("%d\n", convergence[j]);
+        //printf("%d\n", attractor[j]);
       }
-
-    //WARN: Är data transfer korrekt?
     mtx_lock(mtx);
     attractors[i] = attractor;
     convergences[i] = convergence;
     status[tx].val = i + tx;
     mtx_unlock(mtx);
     cnd_signal(cnd);
+
     thrd_sleep(&(struct timespec){.tv_sec=0, .tv_nsec=10}, NULL);
    }
   return 0;
 }
 
 int
-main_thrd_check(
-    void *args
-    )
+main_thrd_check(void *args)
 {
   const thrd_info_check_t *thrd_info = (thrd_info_check_t*) args;
   TYPE_ATTR **attractors = thrd_info->attractors;
@@ -148,34 +140,30 @@ main_thrd_check(
 
   char**color = (char**) malloc(sizeof(char*)*12);
 
-
   GetColors(color, d);
-  printf("color = %d\n",color[0][0]);
-  
+  printf("color = %c\n",color[11][0]);
+
   //char**grayscale = (char**) malloc(sizeof(char*)*128);
 
   //GetGrayScale(grayscale, d);
-  //printf("gray = %d\n",grayscale[0][0]);
+  //printf("gray = %c\n",grayscale[0][0]);
 
   int grayIndex, colorIndex;
   char elementColor[12];
-  //char elementGrayScale[12];
-  //char stringGray[12*lines*sizeof(char)];
-  char stringColor[12*lines*sizeof(char)];
-  //Vart vill vi öppna filen?
-  FILE *fileColor = fopen("output.ppm", "w");
-  if (fileColor == NULL) {
+  char elementGrayScale[12];
+
+  char ** stringGray = (char**)malloc(12*lines*sizeof(char*));
+  char ** stringColor = (char**)malloc(12*lines*sizeof(char*));
+
+  FILE *file = fopen("output.ppm", "w");
+  if (file == NULL) {
     perror("Error opening the file");
     exit(EXIT_FAILURE);
     }
 
-  fprintf(fileColor, "P3\n");
-  fprintf(fileColor, "%d %d \n", lines, lines);
-  fprintf(fileColor, "255\n");
-
-  //fprintf(file_gray, "P3\n");
-  //fprintf(file_gray, "%d %d \n", lines, lines);
-  //fprintf(file_gray, "255\n");
+  fprintf(file, "P3\n");
+  fprintf(file, "%d %d \n", lines, lines);
+  fprintf(file, "255\n");
 
   for ( int ix = 0, ibnd; ix < lines; ) {
     for ( mtx_lock(mtx); ; ) {
@@ -189,26 +177,50 @@ main_thrd_check(
          else {
            mtx_unlock(mtx);
            break;
-         }
-      }
+           }
+    }
+
+    //fprintf(stderr, "checking until %i\n", ibnd);
+    
+    for (int i = 0; i < lines; i++) {
+      stringColor[i] = (char*)malloc(13 * sizeof(char)); // Allocate memory for each string
+      stringColor[i][0] = '\0'; // Initialize each string as empty
+    }
 
     for ( ; ix < ibnd; ++ix ) {
         for(int jx = 0; jx < lines; ++jx){
-           //grayIndex = attractors[ix][jx];
-           colorIndex = convergences[ix][jx];
-           memcpy(stringColor,color[colorIndex], sizeof(char)*12);
+           grayIndex = convergences[ix][jx];
+           colorIndex = attractors[ix][jx];
+	   //printf("%d",colorIndex);
+           //fflush(stdout);
+
+	   if (strlen(color[colorIndex]) < 13 ) {
+            strcat(stringColor[jx], color[colorIndex]);
+        }  else {
+           // printf("StringColor[%d] buffer is full. Cannot concatenate more data.\n", jx);
+	    break;
+	    }
+
+ 	   //strcat(stringColor, color[colorIndex]);
+           //memcpy(stringColor,color[colorIndex], sizeof(char)*12);
            //memcpy(stringGray,grayscale[grayIndex], sizeof(char)*12);
         }
 
-    fwrite(stringColor, sizeof(char), 4*3*lines, fileColor);
+    //printf("%c",stringColor[0]);
+
+    //fwrite(stringColor, sizeof(char), lines * 12 , file);
+    //fwrite(stringGray, sizeof(char), lines*12, file);
 
     free(attractors[ix]);
     free(convergences[ix]);
   }
  }
 
-free(color);
-//free(grayscale);
+ fclose(file); //Vill vi stänga filen här?
+ free(color);
+ free(stringGray);
+ free(stringColor);
+ //free(grayscale);
  return 0;
 }
 
@@ -222,9 +234,9 @@ main(int argc, char *argv[])
     }
 
     for (int i = 1; i < 4; i++) {
-        if (strncmp(argv[i], "-t", 2) == 0) {            
-		numThreads = atoi(argv[i] + 2);
-	} else if (strncmp(argv[i], "-l", 2) == 0) {
+        if (strncmp(argv[i], "-t", 2) == 0) { //strncmp checks the argument 1 to 3
+            numThreads = atoi(argv[i] + 2); //add 2 to get the number after "-t"
+        } else if (strncmp(argv[i], "-l", 2) == 0) {
             lines = atoi(argv[i] + 2);
         } else if (strncmp(argv[i], "", 0) == 0) {
             d = atoi(argv[i] + 0);
@@ -249,13 +261,14 @@ float *rootsEntries = (float*) malloc(sizeof(float)* d * 2);
         roots[ix][jx] = 0;
 
 GetRoots(roots, d);
-printf("roots = %f + %fi \n", roots[0][0], roots[0][1]);
+//printf("roots = %f + %fi \n", roots[0][0], roots[0][1]);
 
 double stepSize = 1/lines;
-const double sz = lines/numThreads; //Används ej!
+//const double sz = lines/numThreads; //Används ej!
 
 TYPE_ATTR**attractors = (TYPE_ATTR **) malloc(lines*sizeof(TYPE_ATTR *));
 TYPE_CONV**convergences = (TYPE_CONV **) malloc(lines*sizeof(TYPE_CONV *));
+
 thrd_t thrds[numThreads];
 thrd_info_t thrds_info[numThreads];
 
@@ -315,14 +328,11 @@ for ( int tx = 0; tx < numThreads; ++tx ) {
   thrd_join(thrd_check, &r);
 }
 
- mtx_destroy(&mtx);
- cnd_destroy(&cnd);
-
 free(attractors);
 free(convergences);
+mtx_destroy(&mtx);
+cnd_destroy(&cnd);
 
- free(rootsEntries);
- free(roots);
 return 0;
 
 }
@@ -332,6 +342,7 @@ void GetRoots( float ** roots, int d) {
             float theta = (ix*2* PI) / d ;
             roots[ix][0] = cos(theta);
             roots[ix][1] = sin(theta);
+	    printf("%f + I%f", roots[ix][0], roots[ix][1]);
     }
 }
 
@@ -357,23 +368,22 @@ void FunctionDerivate(double complex *z,double complex *derivate, int d){
         break;
     case 7:
         *derivate = (*z)*(*z)*(*z)*(*z)*(*z)*(*z);
-	break;
+        break;
     case 8:
         *derivate = (*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z);
-	break;
+        break;
     case 9:
-        *derivate = (*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z); 
-	break;
+        *derivate = (*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z);
+        break;
     case 10:
         *derivate = (*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z)*(*z);
-	break;
+        break;
 
     default:
         fprintf(stderr, "unexpected degree\n");
         exit(1);
     }
 }
-
 
 void GetColors(char**color, int d){
     color[0] = "255 0   0   ";
@@ -392,14 +402,14 @@ void GetColors(char**color, int d){
 
 void GetGrayScale(char**grayscale, int d){
     int stepSize = 255;
-    int greyValue;
-
-    char greyElement[12];
+    int grayValue;
+    char grayElement[12];
 
     for( size_t ix = 0; ix < 128; ix++) {
-            greyValue = stepSize - ix*2;
-            snprintf(greyElement, sizeof(greyElement), "%3d %3d %3d", greyValue,greyValue,greyValue);
-	    snprintf(grayscale[ix], sizeof(greyElement),"%s",greyElement);
+            grayValue = stepSize - ix*2;
+            snprintf(grayElement, sizeof(grayElement), "%3d %3d %3d", grayValue,grayValue,grayValue);
+            snprintf(grayscale[ix], sizeof(grayElement),"%s",grayElement);
+            printf("%c",grayscale[0][0]);
     }
 
 }
