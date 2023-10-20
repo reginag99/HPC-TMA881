@@ -14,8 +14,8 @@ typedef uint8_t TYPE_CONV; //This should be char
 TYPE_ATTR ** attractors;
 TYPE_CONV ** convergences;
 
-void FunctionDerivate(float complex *z,float complex *derivate, int d);
-void GetRoots( float ** roots,  int d);
+void FunctionDerivate(double complex *z,double complex *derivate, int d);
+void GetRoots( double ** roots,  int d);
 void GetColors(char**color, int d);
 void GetGrayScale(char**grayscale);
 
@@ -27,7 +27,7 @@ typedef struct {
 typedef struct {
   TYPE_ATTR **attractors;
   TYPE_CONV **convergences;
-  float**roots;
+  double **roots;
   int numThreads;
   int d;
   int lines;
@@ -53,7 +53,7 @@ int main_thrd(void *args)
   const thrd_info_t *thrd_info = (thrd_info_t*) args;
   TYPE_ATTR **attractors = thrd_info->attractors;
   TYPE_CONV **convergences = thrd_info->convergences;
-  float**roots = thrd_info->roots;
+  double**roots = thrd_info->roots;
   const int numThreads = thrd_info->numThreads;
   int d = thrd_info->d;
   const int lines = thrd_info->lines;
@@ -63,12 +63,12 @@ int main_thrd(void *args)
   int_padded *status = thrd_info->status;
 
   int i, j, k;
-  float ix, jx; //Byt till float!!
-  float realRoot, imagRoot;
-  float complex z,derivate,derivateConj,functionValue,derivateAbs;
+  double ix, jx; //Byt till float!!
+  double realRoot, imagRoot;
+  double complex z,derivate,derivateConj,functionValue,derivateAbs;
 
-  float c0 = 1. - 1./d;
-  float c1 = 1./d;
+  double c0 = 1. - 1./d;
+  double c1 = 1./d;
 
   for (i = tx;  i < lines; i += numThreads ) {
     ix = 2.0 - (4.0 * i /(lines - 1));
@@ -96,8 +96,8 @@ int main_thrd(void *args)
 
 	FunctionDerivate(&z,&derivate, d);
 	functionValue = derivate * z - 1;
-	float complex limit;
-	float complex diff = 0.001;
+	double complex limit;
+	double complex diff = 0.001;
 	FunctionDerivate(&diff,&limit,d+1);
 
 	if (creal(functionValue)*creal(functionValue) + cimag(functionValue)*cimag(functionValue) < creal(limit)){
@@ -247,8 +247,8 @@ main(int argc, char *argv[])
   //printf("lines = %d \n", lines);
   //printf("d = %d \n", d);
 
-  float *rootsEntries = (float*) malloc(sizeof(float)* d * 2);
-  float ** roots = (float**) malloc(sizeof(float*)*d);
+  double *rootsEntries = (double*) malloc(sizeof(double)* d * 2);
+  double ** roots = (double**) malloc(sizeof(double*)*d);
 
   for ( size_t ix = 0, jx = 0; ix < d; ++ix, jx+=2)
     roots[ix] = rootsEntries + jx;
@@ -333,15 +333,15 @@ main(int argc, char *argv[])
 
 }
 
-void GetRoots( float ** roots, int d) {
+void GetRoots( double ** roots, int d) {
   for( size_t ix = 0; ix < d; ix++) {
-    float theta = (ix*2* PI) / d ;
+    double theta = (ix*2* PI) / d ;
     roots[ix][0] = cos(theta);
     roots[ix][1] = sin(theta);
   }
 }
 
-void FunctionDerivate(float complex *z,float complex *derivate, int d){
+void FunctionDerivate(double complex *z,double complex *derivate, int d){
   switch (d) {
     case 1:
       *derivate = 1;
