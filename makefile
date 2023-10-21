@@ -1,38 +1,28 @@
-BINS = none atomic mutex reduction spin condvar semaphore
-CFLAGS = -O0 -g
 
-.PHONY : all
-all : $(BINS)
 
-read_in : read_in.c
-	gcc -o $@ $< -O1 -g
-ellens : ellens.c
-	gcc -o $@ $< -O1 -g
+all: newton
 
-Lisas : Lisas.c
-	gcc -o $@ $< -O1 -g
+newton : function_test.c
+	gcc -o newton function_test.c -O2 -g -lpthread -lm
 
-min : min.c
-	gcc -o $@ $< -O1 -g
+run: newton
+	./newton -t1 -l1000 1
+	./newton -t1 -l1000 2
+	./newton -t1 -l1000 5
+	./newton -t1 -l1000 7
 
-Ass2OpenMP : Ass2OpenMP.c
-	gcc -o $@ $< -O2 -g
+	./newton -t1 -l1000 5
+	./newton -t2 -l1000 5
+	./newton -t3 -l1000 5
+	./newton -t4 -l1000 5
 
-Idas : Idas.c
-	gcc -o $@ $< -O2 -g
+	./newton -t10 -l1000 7
+	./newton -t10 -l2000 7
+	./newton -t10 -l3000 7
 
-Assignment3 : Assignment3.c
-	gcc -o $@ $< -O2 -g
+	make clean
 
-ass3_minne : ass3_minne.c
-	gcc $(CFLAGS) -o $@ $< -lpthread -lm
+clean:
+	rm -f newton
 
-ass3_ny : ass3_ny.c
-	gcc $(CFLAGS) -o $@ $< -lpthread -lm
-
-ass3_ny2 : ass3_ny2.c
-	gcc $(CFLAGS) -o $@ $< -lpthread -lm
-
-.PHONY : clean
-clean :
-	rm -rf $(BINS)
+.PHONY: run clean
