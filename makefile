@@ -3,7 +3,7 @@
 all: newton
 
 newton : function_test.c
-	gcc -o newton function_test.c -O2 -g -lpthread -lm
+	gcc -o newton function_test.c -O3 -g -lpthread -lm
 
 run: newton
 	./newton -t1 -l1000 1
