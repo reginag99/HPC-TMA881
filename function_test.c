@@ -90,19 +90,19 @@ int main_thrd(void *args)
       jx = -2.0 + (4.0 * j / (lines - 1));
       z = ix + jx * I;
       for (k = 0; k < 128; k++){
-	if (creal(z)*creal(z)<0.000001 && cimag(z)*cimag(z)<0.000001){
+	if (crealf(z)*crealf(z)<0.000001 && cimagf(z)*cimagf(z)<0.000001){
 	  break;}
-	if (creal(z) > 1000000000.||creal(z) < -1000000000.||cimag(z) > 1000000000.||cimag(z) < -1000000000.){
+	if (crealf(z) > 1000000000.||crealf(z) < -1000000000.||cimagf(z) > 1000000000.||cimagf(z) < -1000000000.){
 	  break;}
 
 	FunctionDerivate(&z,&derivate, d);
 	functionValue = derivate * z - 1;
 
-	if (creal(functionValue)*creal(functionValue) + cimag(functionValue)*cimag(functionValue) < 0.000001){
+	if (crealf(functionValue)*crealf(functionValue) + cimagf(functionValue)*cimagf(functionValue) < 0.000001){
 	  convergence[j] = k;
 	  for(int ixd = 0; ixd < d; ixd++){
-	     if((creal(z) <=  (roots[ixd][0] + 0.001) && creal(z) >=  (roots[ixd][0] - 0.001)) &&
-                (cimag(z) <=  (roots[ixd][1] + 0.001) && cimag(z) >=  (roots[ixd][1] - 0.001))){
+	     if((crealf(z) <=  (roots[ixd][0] + 0.001) && crealf(z) >=  (roots[ixd][0] - 0.001)) &&
+                (cimagf(z) <=  (roots[ixd][1] + 0.001) && cimagf(z) >=  (roots[ixd][1] - 0.001))){
                            attractor [j] = ixd;
                            break;
             }
